@@ -321,7 +321,7 @@ struct SettingsMigrationV10toV11Tests {
         // has `softwareDeviceVolumeEnabled`, so decoding doesn't throw.
         #expect(decoded.version == 10)
         #expect(decoded.deviceVolumeTierOverride.isEmpty == true)
-        #expect(decoded.appSettings.lockInputDevice == true)
+        #expect(decoded.appSettings.lockInputDevice == false)  // forced off in this fork
         #expect(decoded.appSettings.showDeviceDisconnectAlerts == true)
         #expect(decoded.softwareDeviceVolumes.isEmpty)
         #expect(decoded.softwareDeviceMuteStates.isEmpty)

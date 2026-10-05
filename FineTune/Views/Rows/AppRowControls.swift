@@ -32,18 +32,37 @@ struct AppRowControls: View {
         dragOverrideValue ?? VolumeMapping.gainToSlider(volume)
     }
 
+    /// Drag binding: positions near 100% snap to it, so the thumb catches at unity.
     private var sliderBinding: Binding<Double> {
         Binding(
             get: { sliderValue },
-            set: { newValue in
-                dragOverrideValue = newValue
-                let gain = VolumeMapping.sliderToGain(newValue)
-                onVolumeChange(gain)
-                if isMuted {
-                    onMuteChange(false)
-                }
+            set: { applySlider(VolumeMapping.applyingUnityDetent($0)) }
+        )
+    }
+
+    /// Scroll-wheel binding: steps stop once at 100% instead of snapping back
+    /// into the detent on every tick.
+    private var scrollBinding: Binding<Double> {
+        Binding(
+            get: { sliderValue },
+            set: {
+                applySlider(VolumeMapping.steppedSlider(from: sliderValue, delta: $0 - sliderValue))
+                // No drag is in progress, so let the value track the engine again.
+                dragOverrideValue = nil
             }
         )
+    }
+
+    private func applySlider(_ newValue: Double) {
+        // Tick the trackpad when the slider lands on the 100% detent.
+        if newValue == 1.0 && sliderValue != 1.0 {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        }
+        dragOverrideValue = newValue
+        onVolumeChange(VolumeMapping.sliderToGain(newValue))
+        if isMuted {
+            onMuteChange(false)
+        }
     }
 
     /// The displayed percentage value, matching EditablePercentage's formula.
@@ -82,7 +101,8 @@ struct AppRowControls: View {
             // Volume slider
             LiquidGlassSlider(
                 value: sliderBinding,
-                showUnityMarker: false,
+                in: 0...VolumeMapping.maxSlider,
+                showUnityMarker: true,
                 onEditingChanged: { editing in
                     if !editing {
                         dragOverrideValue = nil
@@ -91,7 +111,7 @@ struct AppRowControls: View {
             )
             .frame(width: DesignTokens.Dimensions.sliderWidth)
             .opacity(showMutedIcon ? 0.5 : 1.0)
-            .scrollWheelStep(sliderBinding, in: 0.0...1.0)
+            .scrollWheelStep(scrollBinding, in: 0.0...VolumeMapping.maxSlider)
 
             // Editable volume percentage (shows slider position, not raw gain)
             EditablePercentage(
@@ -105,7 +125,7 @@ struct AppRowControls: View {
                         onVolumeChange(gain)
                     }
                 ),
-                range: 0...100,
+                range: 0...Int(VolumeMapping.maxSlider * 100),
                 isRowFocused: isRowFocused
             )
 

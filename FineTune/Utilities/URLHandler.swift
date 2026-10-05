@@ -144,7 +144,7 @@ final class URLHandler {
 
         switch direction.lowercased() {
         case "up", "+":
-            sliderPosition = min(1.0, sliderPosition + stepAmount)
+            sliderPosition = VolumeMapping.steppedSlider(from: sliderPosition, delta: stepAmount)
         case "down", "-":
             sliderPosition = max(0.0, sliderPosition - stepAmount)
         default:

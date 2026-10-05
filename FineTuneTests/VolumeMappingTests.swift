@@ -40,10 +40,28 @@ struct VolumeMappingSliderToGainTests {
         #expect(VolumeMapping.sliderToGain(-100) == 0)
     }
 
-    @Test("sliderToGain clamps input above 1.0")
-    func sliderAboveOneClamped() {
-        let gain = VolumeMapping.sliderToGain(2.0)
-        #expect(gain == 1.0)
+    @Test("sliderToGain extends to 200% (gain 4.0) and clamps above")
+    func sliderOverUnity() {
+        #expect(VolumeMapping.sliderToGain(1.5) == 2.25)
+        #expect(VolumeMapping.sliderToGain(2.0) == 4.0)
+        #expect(VolumeMapping.sliderToGain(3.0) == 4.0)
+    }
+
+    @Test("Unity detent snaps nearby positions to 100%")
+    func unityDetent() {
+        #expect(VolumeMapping.applyingUnityDetent(0.97) == 1.0)
+        #expect(VolumeMapping.applyingUnityDetent(1.04) == 1.0)
+        #expect(VolumeMapping.applyingUnityDetent(0.8) == 0.8)
+        #expect(VolumeMapping.applyingUnityDetent(1.2) == 1.2)
+    }
+
+    @Test("Stepping up stops at 100% before entering boost range")
+    func steppedSlider() {
+        #expect(VolumeMapping.steppedSlider(from: 0.95, delta: 0.1) == 1.0)
+        #expect(abs(VolumeMapping.steppedSlider(from: 1.0, delta: 0.1) - 1.1) < 1e-9)
+        #expect(abs(VolumeMapping.steppedSlider(from: 1.05, delta: -0.1) - 0.95) < 1e-9)
+        #expect(VolumeMapping.steppedSlider(from: 1.95, delta: 0.1) == 2.0)
+        #expect(VolumeMapping.steppedSlider(from: 0.05, delta: -0.1) == 0.0)
     }
 
     @Test("Square-law known values",
@@ -88,10 +106,10 @@ struct VolumeMappingGainToSliderTests {
         #expect(VolumeMapping.gainToSlider(-0.5) == 0)
     }
 
-    @Test("gainToSlider clamps input above 1.0")
-    func gainAboveOneClamped() {
-        let slider = VolumeMapping.gainToSlider(2.0)
-        #expect(abs(slider - 1.0) < 1e-6)
+    @Test("gainToSlider maps boosted gain past 1.0 and clamps at 4.0")
+    func gainOverUnity() {
+        #expect(abs(VolumeMapping.gainToSlider(4.0) - 2.0) < 1e-6)
+        #expect(abs(VolumeMapping.gainToSlider(9.0) - 2.0) < 1e-6)
     }
 
     @Test("Round-trip: sliderToGain → gainToSlider recovers original",

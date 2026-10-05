@@ -104,7 +104,7 @@ final class ShortcutsRegistry {
 
         let currentGain = audioEngine.currentVolume(for: app)
         let currentSlider = VolumeMapping.gainToSlider(currentGain)
-        let nextSlider = max(0.0, min(1.0, currentSlider + sliderDelta))
+        let nextSlider = VolumeMapping.steppedSlider(from: currentSlider, delta: sliderDelta)
         let nextGain = VolumeMapping.sliderToGain(nextSlider)
 
         let currentMute = audioEngine.isMuted(for: app)

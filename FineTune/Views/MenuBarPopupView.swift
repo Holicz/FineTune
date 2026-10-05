@@ -963,7 +963,7 @@ struct MenuBarPopupView: View {
         setMute: (Bool) -> Void
     ) {
         let currentSlider = VolumeMapping.gainToSlider(currentGain)
-        let nextSlider = max(0.0, min(1.0, currentSlider + delta))
+        let nextSlider = VolumeMapping.steppedSlider(from: currentSlider, delta: delta)
         let nextGain = VolumeMapping.sliderToGain(nextSlider)
         let willBeSilent = nextSlider <= 0.001
         if direction > 0 {

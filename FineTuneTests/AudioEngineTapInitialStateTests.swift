@@ -211,8 +211,8 @@ struct AudioEngineTapInitialStateTests {
 
     // MARK: Single-knob derivation
 
-    @Test("EQ settings persisted for this app land in TapInitialState.eqSettings")
-    func eqSettingsAreCarried() throws {
+    @Test("Persisted per-app EQ is ignored (EQ removed in this fork): tap starts flat")
+    func eqSettingsAreIgnored() throws {
         let fix = makeFixture()
         let custom = EQSettings(bandGains: [3, 0, -2, 0, 0, 0, 0, 0, 0, 4], isEnabled: true)
         fix.settings.setEQSettings(custom, for: fix.app.persistenceIdentifier)
@@ -220,7 +220,7 @@ struct AudioEngineTapInitialStateTests {
         fix.engine.setDevice(for: fix.app, deviceUID: fix.device.uid)
 
         let snap = try #require(capturedInitial(fix))
-        #expect(snap.eqSettings == custom)
+        #expect(snap.eqSettings == .flat)
     }
 
     @Test("autoEQPreampEnabled mirrors settingsManager.autoEQPreampEnabled",

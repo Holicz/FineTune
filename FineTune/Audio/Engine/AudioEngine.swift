@@ -669,13 +669,14 @@ final class AudioEngine {
         volumeState.getBoost(for: app.id)
     }
 
-    /// Effective gain for ProcessTapController: app volume × boost, plus optional
+    /// Effective gain for ProcessTapController: app volume (0–4, the slider runs to 200%;
+    /// the legacy boost multiplier is ignored in this fork), plus optional
     /// single-device software output gain for software-backed devices.
     /// Single-device-routed apps on `.software`-backed devices always receive the
     /// device's software gain; multi-destination routing keeps `appGain` alone
     /// because per-device software gain has no unambiguous meaning across fan-out.
     private func effectiveVolume(for pid: pid_t, deviceUIDs: [String]? = nil) -> Float {
-        let appGain = volumeState.getVolume(for: pid) * volumeState.getBoost(for: pid).rawValue
+        let appGain = min(volumeState.getVolume(for: pid), 4.0)
 
         guard let resolvedUIDs = deviceUIDs, resolvedUIDs.count == 1,
               let primaryUID = resolvedUIDs.first,
