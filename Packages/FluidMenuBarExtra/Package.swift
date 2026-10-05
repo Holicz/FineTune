@@ -1,10 +1,10 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
     name: "FluidMenuBarExtra",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v26)],
     products: [
         .library(
             name: "FluidMenuBarExtra",
@@ -20,5 +20,6 @@ let package = Package(
             name: "FluidMenuBarExtra",
             dependencies: []
         )
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

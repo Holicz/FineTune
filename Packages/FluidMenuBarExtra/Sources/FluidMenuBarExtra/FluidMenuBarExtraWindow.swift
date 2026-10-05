@@ -17,14 +17,17 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
     private let content: () -> Content
     weak var statusItem: FluidMenuBarExtraStatusItem? = nil
 
-    private lazy var visualEffectView: NSVisualEffectView = {
-        let view = NSVisualEffectView()
-        view.blendingMode = .behindWindow
-        view.state = .active
-        view.material = .popover
-        view.translatesAutoresizingMaskIntoConstraints = true
+    // Liquid Glass background, like the macOS 26 menu bar extras. It sits inset
+    // in a transparent container so its soft shadow isn't clipped by the window edge.
+    private lazy var glassView: NSGlassEffectView = {
+        let view = NSGlassEffectView()
+        view.style = .regular
+        view.cornerRadius = GlassMetrics.cornerRadius
+        view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
+
+    private let containerView = NSView()
 
     private var rootView: some View {
         content()
@@ -51,7 +54,8 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
 
         super.init(
             contentRect: CGRect(x: 0, y: 0, width: 100, height: 100),
-            styleMask: [.titled, .nonactivatingPanel, .utilityWindow, .fullSizeContentView],
+            // Borderless so the glass view defines the panel's shape and shadow.
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -63,37 +67,61 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
         isFloatingPanel = true
         level = .statusBar
         isOpaque = false
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
+        backgroundColor = .clear
+        // The glass draws its own rim; a window shadow would trace the square frame.
+        hasShadow = false
 
         animationBehavior = animation
         collectionBehavior = [.stationary, .moveToActiveSpace, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
 
-        standardWindowButton(.closeButton)?.isHidden = true
-        standardWindowButton(.miniaturizeButton)?.isHidden = true
-        standardWindowButton(.zoomButton)?.isHidden = true
-
-        contentView = visualEffectView
-        visualEffectView.addSubview(hostingView)
-        setContentSize(hostingView.intrinsicContentSize)
+        let margin = GlassMetrics.shadowMargin
+        contentView = containerView
+        containerView.addSubview(glassView)
+        glassView.contentView = hostingView
+        setContentSize(GlassMetrics.windowSize(forGlass: hostingView.intrinsicContentSize))
 
         NSLayoutConstraint.activate([
-            hostingView.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
-            hostingView.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
-            hostingView.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
-            hostingView.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor)
+            glassView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: margin),
+            glassView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -margin),
+            glassView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -margin),
+            glassView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: margin),
+            hostingView.topAnchor.constraint(equalTo: glassView.topAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: glassView.trailingAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: glassView.bottomAnchor),
+            hostingView.leadingAnchor.constraint(equalTo: glassView.leadingAnchor)
         ])
     }
 
+    // Borderless panels refuse key status by default; the popup needs it for
+    // keyboard navigation and text entry.
+    override var canBecomeKey: Bool { true }
+
     private func contentSizeDidUpdate(to size: CGSize) {
-        guard frame.size != size else {
+        guard frame.size != GlassMetrics.windowSize(forGlass: size) else {
             return
         }
 
         DispatchQueue.main.async { [weak self] in
             self?.statusItem?.setWindowFrame(size: size, animate: true)
         }
+    }
+}
+
+/// Geometry of the glass panel inside its (larger, transparent) window.
+enum GlassMetrics {
+    static let cornerRadius: CGFloat = 22
+    /// Transparent room around the glass for its shadow.
+    static let shadowMargin: CGFloat = 24
+    /// Gap between the menu bar and the top of the glass.
+    static let menuBarGap: CGFloat = 5
+
+    static func windowSize(forGlass size: CGSize) -> CGSize {
+        CGSize(width: size.width + 2 * shadowMargin, height: size.height + 2 * shadowMargin)
+    }
+
+    static func glassSize(forWindow size: CGSize) -> CGSize {
+        CGSize(width: size.width - 2 * shadowMargin, height: size.height - 2 * shadowMargin)
     }
 }

@@ -197,7 +197,7 @@ final class FluidMenuBarExtraStatusItem: NSObject, NSWindowDelegate {
         guard let statusItemWindow = statusItem.button?.window else {
             // If we don't know where the status item is, just place the window in the center.
             if let size {
-                window.setFrame(NSRect(origin: window.frame.origin, size: size), display: true, animate: false)
+                window.setFrame(NSRect(origin: window.frame.origin, size: GlassMetrics.windowSize(forGlass: size)), display: true, animate: false)
             }
 
             window.center()
@@ -205,9 +205,10 @@ final class FluidMenuBarExtraStatusItem: NSObject, NSWindowDelegate {
         }
 
         let statusItemFrame = statusItemWindow.frame
-        var newFrame = CGRect(origin: statusItemFrame.origin, size: size ?? window.frame.size)
+        // Lay out the glass rectangle first, then grow it by the shadow margin.
+        var newFrame = CGRect(origin: statusItemFrame.origin, size: size ?? GlassMetrics.glassSize(forWindow: window.frame.size))
 
-        newFrame.origin.y -= newFrame.height
+        newFrame.origin.y -= newFrame.height + GlassMetrics.menuBarGap
 
         switch alignment {
         case .left:
@@ -243,6 +244,8 @@ final class FluidMenuBarExtraStatusItem: NSObject, NSWindowDelegate {
                 }
             }
         }
+
+        newFrame = newFrame.insetBy(dx: -GlassMetrics.shadowMargin, dy: -GlassMetrics.shadowMargin)
 
         guard newFrame != window.frame else {
             return
