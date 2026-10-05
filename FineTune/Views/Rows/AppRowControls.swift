@@ -109,9 +109,6 @@ struct AppRowControls: View {
                 isRowFocused: isRowFocused
             )
 
-            // Boost chevrons
-            BoostChevrons(level: boost, onTap: { onBoostChange(boost.next) })
-
             DevicePicker(
                 devices: devices,
                 deviceIconOverrides: deviceIconOverrides,
@@ -128,35 +125,6 @@ struct AppRowControls: View {
                 triggerWidth: 0,
                 triggerStyle: .iconOnly
             )
-
-            // EQ button
-            Button {
-                onEQToggle()
-            } label: {
-                ZStack {
-                    Image(systemName: "slider.vertical.3")
-                        .opacity(isEQExpanded ? 0 : 1)
-                        .rotationEffect(.degrees(isEQExpanded ? 90 : 0))
-
-                    Image(systemName: "xmark")
-                        .opacity(isEQExpanded ? 1 : 0)
-                        .rotationEffect(.degrees(isEQExpanded ? 0 : -90))
-                }
-                .font(.system(size: 12))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(eqButtonColor)
-                .frame(
-                    minWidth: DesignTokens.Dimensions.minTouchTarget,
-                    minHeight: DesignTokens.Dimensions.minTouchTarget
-                )
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isEQExpanded ? "Close Equalizer" : "Equalizer")
-            .onHover { isEQButtonHovered = $0 }
-            .help(isEQExpanded ? "Close Equalizer" : "Equalizer")
-            .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isEQExpanded)
-            .animation(DesignTokens.Animation.hover, value: isEQButtonHovered)
         }
         .fixedSize()
     }

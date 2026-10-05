@@ -31,7 +31,7 @@ nonisolated struct AppSettings: Codable, Equatable {
     var defaultNewAppVolume: Float = 1.0      // 100% (unity gain)
 
     // Input Device Lock
-    var lockInputDevice: Bool = true          // Prevent auto-switching input device
+    var lockInputDevice: Bool = false         // Input UI is removed in this fork; macOS owns input selection
 
     // Notifications
     var showDeviceDisconnectAlerts: Bool = true
@@ -68,7 +68,8 @@ nonisolated struct AppSettings: Codable, Equatable {
         launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
         menuBarIconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .menuBarIconStyle) ?? .default
         defaultNewAppVolume = try c.decodeIfPresent(Float.self, forKey: .defaultNewAppVolume) ?? 1.0
-        lockInputDevice = try c.decodeIfPresent(Bool.self, forKey: .lockInputDevice) ?? true
+        // Always off: with no input UI, a lock would block input changes made in System Settings.
+        lockInputDevice = false
         showDeviceDisconnectAlerts = try c.decodeIfPresent(Bool.self, forKey: .showDeviceDisconnectAlerts) ?? true
         loudnessCompensationEnabled = try c.decodeIfPresent(Bool.self, forKey: .loudnessCompensationEnabled) ?? false
         loudnessEqualizationEnabled = try c.decodeIfPresent(Bool.self, forKey: .loudnessEqualizationEnabled) ?? false
@@ -261,8 +262,9 @@ final class SettingsManager {
         scheduleSave()
     }
 
+    /// EQ is removed from the UI in this fork, so stored per-app EQ is never applied.
     func getEQSettings(for appIdentifier: String) -> EQSettings {
-        return settings.appEQSettings[appIdentifier] ?? EQSettings.flat
+        EQSettings.flat
     }
 
     func setEQSettings(_ eqSettings: EQSettings, for appIdentifier: String) {
@@ -695,8 +697,9 @@ final class SettingsManager {
 
     // MARK: - Per-Device AutoEQ
 
+    /// AutoEQ is removed from the UI in this fork, so stored selections are never applied.
     func getAutoEQSelection(for deviceUID: String) -> AutoEQSelection? {
-        settings.deviceAutoEQ[deviceUID]
+        nil
     }
 
     func setAutoEQSelection(for deviceUID: String, to selection: AutoEQSelection?) {

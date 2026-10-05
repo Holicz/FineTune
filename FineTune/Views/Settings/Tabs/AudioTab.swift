@@ -80,16 +80,6 @@ struct AudioTab: View {
     private var devicesSection: some View {
         SettingsSection("Devices") {
             SettingsRow(
-                "Lock Input Device",
-                description: "Prevent auto-switching when devices connect"
-            ) {
-                Toggle("", isOn: $settings.appSettings.lockInputDevice)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .labelsHidden()
-            }
-            SettingsRowDivider()
-            SettingsRow(
                 "System Sounds",
                 description: "Where alerts and effects play"
             ) {
