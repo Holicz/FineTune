@@ -222,7 +222,7 @@ struct AppSettingsDefaultTests {
     func defaults() {
         let settings = AppSettings()
         #expect(settings.launchAtLogin == false)
-        #expect(settings.menuBarIconStyle == .default)
+        #expect(settings.menuBarIconStyle == .speaker)
         #expect(settings.defaultNewAppVolume == 1.0)
         #expect(settings.lockInputDevice == false)
         #expect(settings.showDeviceDisconnectAlerts == true)

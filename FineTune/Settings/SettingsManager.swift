@@ -25,7 +25,7 @@ struct IgnoredAppInfo: Codable, Equatable {
 nonisolated struct AppSettings: Codable, Equatable {
     // General
     var launchAtLogin: Bool = false
-    var menuBarIconStyle: MenuBarIconStyle = .default
+    var menuBarIconStyle: MenuBarIconStyle = .speaker
 
     // Audio
     var defaultNewAppVolume: Float = 1.0      // 100% (unity gain)
@@ -66,7 +66,7 @@ nonisolated struct AppSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
-        menuBarIconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .menuBarIconStyle) ?? .default
+        menuBarIconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .menuBarIconStyle) ?? .speaker
         defaultNewAppVolume = try c.decodeIfPresent(Float.self, forKey: .defaultNewAppVolume) ?? 1.0
         // Always off: with no input UI, a lock would block input changes made in System Settings.
         lockInputDevice = false

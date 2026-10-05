@@ -135,28 +135,35 @@ struct SpeakerBaselineTests {
 
     @Test("Unmuted mid volume → speakerVolume(.mid)")
     func speakerUnmutedMid() {
-        let state = MenuBarIconState.baseline(style: .speaker, volume: 0.5, muted: false)
+        let state = MenuBarIconState.baseline(style: .speaker, volume: 0.5, muted: false, deviceSymbol: "hifispeaker")
         #expect(state == .speakerVolume(.mid))
     }
 
     @Test("Unmuted full volume → speakerVolume(.high)")
     func speakerUnmutedFull() {
-        let state = MenuBarIconState.baseline(style: .speaker, volume: 1.0, muted: false)
+        let state = MenuBarIconState.baseline(style: .speaker, volume: 1.0, muted: false, deviceSymbol: "hifispeaker")
         #expect(state == .speakerVolume(.high))
     }
 
     @Test("Unmuted zero volume → speakerVolume(.zero)")
     func speakerUnmutedZero() {
-        let state = MenuBarIconState.baseline(style: .speaker, volume: 0.0, muted: false)
+        let state = MenuBarIconState.baseline(style: .speaker, volume: 0.0, muted: false, deviceSymbol: "hifispeaker")
         #expect(state == .speakerVolume(.zero))
     }
 
     @Test("Muted at any volume → speakerMuted")
     func speakerMutedOverridesVolume() {
         for v in [Float(0.0), 0.2, 0.5, 0.8, 1.0] {
-            let state = MenuBarIconState.baseline(style: .speaker, volume: v, muted: true)
+            let state = MenuBarIconState.baseline(style: .speaker, volume: v, muted: true, deviceSymbol: "hifispeaker")
             #expect(state == .speakerMuted, "volume=\(v)")
         }
+    }
+
+    @Test("Headphone outputs show their own glyph, like the native Sound icon",
+          arguments: ["airpodsmax", "airpodspro", "airpods.gen3", "beats.headphones", "headphones"])
+    func speakerStyleShowsHeadphones(symbol: String) {
+        #expect(MenuBarIconState.baseline(style: .speaker, volume: 0.5, muted: false, deviceSymbol: symbol) == .device(symbol: symbol))
+        #expect(MenuBarIconState.baseline(style: .speaker, volume: 0.5, muted: true, deviceSymbol: symbol) == .device(symbol: symbol))
     }
 }
 

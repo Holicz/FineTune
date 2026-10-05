@@ -67,6 +67,9 @@ extension MenuBarIconState {
     ) -> MenuBarIconState {
         switch style {
         case .speaker:
+            // Like the native Sound menu extra: headphones show their own glyph,
+            // everything else shows the speaker with its volume level.
+            if isHeadphoneSymbol(deviceSymbol) { return .device(symbol: deviceSymbol) }
             if muted { return .speakerMuted }
             return .speakerVolume(.bucket(for: volume))
         case .device:
@@ -78,5 +81,10 @@ extension MenuBarIconState {
         case .equalizer:
             return .staticBaseline(.systemSymbol("slider.vertical.3"))
         }
+    }
+
+    /// AirPods, Beats and generic headphone glyphs from `iconSymbol(forName:transport:)`.
+    static func isHeadphoneSymbol(_ symbol: String) -> Bool {
+        symbol.hasPrefix("airpods") || symbol.hasPrefix("beats") || symbol.hasPrefix("headphones") || symbol.hasPrefix("earbuds")
     }
 }

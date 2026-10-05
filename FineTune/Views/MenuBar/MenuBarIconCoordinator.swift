@@ -54,6 +54,8 @@ final class MenuBarIconCoordinator: MediaKeyIconFlashing {
     /// If the same symbol is already flashing, extends the timer rather than restarting the fade —
     /// prevents mid-fade pops when device-change and media-key triggers coincide.
     func flashDevice() {
+        // The speaker style already tracks the device like the native Sound icon; no flash.
+        guard settings.appSettings.menuBarIconStyle != .speaker else { return }
         let symbol = currentDeviceSymbol()
         let alreadyShowingSame = (flashActiveSymbol == symbol)
         flashActiveSymbol = symbol
