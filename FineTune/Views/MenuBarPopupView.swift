@@ -62,9 +62,6 @@ struct MenuBarPopupView: View {
     /// `.onKeyPress` only fires when the modifier-owning view (or a focused
     /// descendant) has focus, so the body root holds a focus anchor.
     @FocusState private var anchorFocused: Bool
-    /// Owns keyboard percentage entry (buffer + commit/restore signals), broadcast to
-    /// rows via the environment. First responder stays on the nav anchor throughout.
-    @State private var textEntry = PopupTextEntryCoordinator()
 
     /// Ceiling on the scrollable body, sized for a 13" MacBook Air.
     private let maxContentHeight: CGFloat = 560
@@ -158,7 +155,6 @@ struct MenuBarPopupView: View {
             hasKeyboardEngaged = false
             selectedRow = nil
             anchorFocused = true
-            textEntry.buffer = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { notification in
             guard let window = notification.object as? NSWindow,
@@ -181,11 +177,6 @@ struct MenuBarPopupView: View {
         .onKeyPress(phases: [.down, .repeat]) { keyPress in
             handleKeyPress(keyPress)
         }
-        .environment(textEntry)
-        .onChange(of: textEntry.navRestoreNonce) { _, _ in
-            // A mouse-driven field edit ended; reclaim nav focus so arrows/Return work.
-            anchorFocused = true
-        }
         .background {
             Button("") { handleEscape() }
                 .keyboardShortcut(.escape, modifiers: [])
@@ -193,14 +184,8 @@ struct MenuBarPopupView: View {
         }
     }
 
-    /// Escape cancels keyboard percentage entry first, then dismisses the popup.
+    /// Escape dismisses the popup.
     private func handleEscape() {
-        // The hidden Escape keyboardShortcut button can win over `.onKeyPress`, so an
-        // in-progress keyboard entry is cancelled here too.
-        if textEntry.buffer != nil {
-            textEntry.buffer = nil
-            return
-        }
         NSApp.keyWindow?.resignKey()
     }
 
@@ -387,19 +372,14 @@ struct MenuBarPopupView: View {
     private func handleKeyPress(_ keyPress: KeyPress) -> KeyPress.Result {
         // `.onKeyPress` also fires for focused descendants; yield while a TextField is editing so its Return commits via onSubmit instead of activating a row.
         if NSApp.keyWindow?.firstResponder is NSTextView { return .ignored }
-        // Keyboard entry mode: the popup owns every key so the anchor keeps first responder.
-        if textEntry.buffer != nil {
-            return handleKeyboardEditKey(keyPress)
-        }
         let mods = keyPress.modifiers
         let isM = keyPress.key == KeyEquivalent("m")
-        let editSeed = digitSeed(for: keyPress)
         let isRecognized: Bool = {
             switch keyPress.key {
             case .upArrow, .downArrow, .leftArrow, .rightArrow, .return, .space:
                 return true
             default:
-                return isM || editSeed != nil
+                return isM
             }
         }()
         // Wake gate: compute target locally so first-press actions never read a
@@ -438,48 +418,8 @@ struct MenuBarPopupView: View {
         case .return, .space:
             return activate(target)
         default:
-            if let editSeed, keyPress.phase == .down, target != nil {
-                textEntry.buffer = editSeed
-                return .handled
-            }
             return isM ? toggleMute(for: target) : .ignored
         }
-    }
-
-    /// Consumes every key while entry is active so editing keystrokes never leak to navigation.
-    private func handleKeyboardEditKey(_ keyPress: KeyPress) -> KeyPress.Result {
-        // The Mac ⌫ key arrives as DEL (U+007F), which `KeyEquivalent.delete` doesn't match.
-        if keyPress.characters == "\u{7f}" || keyPress.key == .delete {
-            let next = String((textEntry.buffer ?? "").dropLast())
-            textEntry.buffer = next.isEmpty ? nil : next
-            return .handled
-        }
-        switch keyPress.key {
-        case .return:
-            textEntry.commitNonce += 1
-            return .handled
-        case .escape:
-            textEntry.buffer = nil
-            return .handled
-        default:
-            if let digit = digitSeed(for: keyPress), keyPress.phase == .down {
-                let current = textEntry.buffer ?? ""
-                if current.count < 4 {
-                    textEntry.buffer = current + digit
-                }
-            }
-            return .handled
-        }
-    }
-
-    /// The bare digit `0`–`9` for this key press, or nil (modifier combos excluded).
-    private func digitSeed(for keyPress: KeyPress) -> String? {
-        guard keyPress.modifiers.intersection([.command, .control, .option]).isEmpty,
-              keyPress.characters.count == 1,
-              let ch = keyPress.characters.first,
-              ("0"..."9").contains(ch)
-        else { return nil }
-        return String(ch)
     }
 
     private func adjustVolume(at target: PopupKeyboardNavModel.RowID?, direction: Int, shift: Bool) -> KeyPress.Result {

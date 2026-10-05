@@ -52,7 +52,7 @@ struct PanelDeviceRow<Accessory: View>: View {
 
 // MARK: - App volume
 
-/// App icon + name over a volume slider and percentage.
+/// App icon + name over a volume slider.
 /// Clicking the icon toggles mute.
 struct PanelAppRow: View {
     let name: String
@@ -64,8 +64,6 @@ struct PanelAppRow: View {
     var routingSubtitle: String? = nil
     let onVolumeChange: (Float) -> Void
     let onMuteChange: (Bool) -> Void
-
-    private var percentage: Int { Int(round(VolumeMapping.gainToSlider(volume) * 100)) }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -104,14 +102,6 @@ struct PanelAppRow: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 4)
-                    EditablePercentage(
-                        percentage: Binding(
-                            get: { percentage },
-                            set: { onVolumeChange(VolumeMapping.sliderToGain(Double($0) / 100)) }
-                        ),
-                        range: 0...100,
-                        isRowFocused: isFocused
-                    )
                 }
                 AppVolumeSlider(
                     volume: volume,
@@ -158,9 +148,6 @@ struct PanelSystemSoundsRow: View {
                     Text("System Sounds")
                         .font(.system(size: 13))
                     Spacer(minLength: 4)
-                    Text("\(Int(round(volume * 100)))%")
-                        .font(.system(size: 11).monospacedDigit())
-                        .foregroundStyle(.secondary)
                 }
                 Slider(
                     value: Binding(get: { Double(volume) }, set: { onVolumeChange(Float($0)) }),

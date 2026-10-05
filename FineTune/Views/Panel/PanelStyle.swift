@@ -65,12 +65,10 @@ struct PanelCircleIcon: View {
     var isSelected: Bool = false
     var size: CGFloat = PanelMetrics.circleSize
 
-    /// Native badges use filled glyphs where one exists (hifispeaker.fill, tv.fill …)
-    /// and the generic laptop instead of the MacBook outline.
+    /// Native badges use filled glyphs where one exists (hifispeaker.fill, tv.fill …).
     private var glyph: String {
-        let base = systemName == "macbook" ? "laptopcomputer" : systemName
-        let filled = base + ".fill"
-        return NSImage(systemSymbolName: filled, accessibilityDescription: nil) != nil ? filled : base
+        let filled = systemName + ".fill"
+        return NSImage(systemSymbolName: filled, accessibilityDescription: nil) != nil ? filled : systemName
     }
 
     var body: some View {
