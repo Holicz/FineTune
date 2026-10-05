@@ -11,7 +11,7 @@ extension MenuBarIconImage {
     static let canvasSize = NSSize(width: 26, height: 22)
 
     /// Matches the glyph size of the system menu extras (Sound, Control Center).
-    static let symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+    static let symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
 
     func nsImage(accessibilityDescription: String = "FineTune") -> NSImage? {
         let source: NSImage?
@@ -28,7 +28,8 @@ extension MenuBarIconImage {
         let scale = min(1, canvas.width / source.size.width, canvas.height / source.size.height)
         let drawRect = NSRect(
             x: (canvas.width - source.size.width * scale) / 2,
-            y: (canvas.height - source.size.height * scale) / 2,
+            // +0.5pt lines the glyph up with the system menu extras.
+            y: (canvas.height - source.size.height * scale) / 2 + 0.5,
             width: source.size.width * scale,
             height: source.size.height * scale
         )
