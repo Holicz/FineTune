@@ -47,6 +47,9 @@ struct MenuBarPopupView: View {
     /// collapsed).
     @State private var expandedDeviceUID: String?
 
+    /// AirPods/Beats noise control for the current output.
+    @State private var listeningModes = ListeningModeController()
+
     @State private var navModel = PopupKeyboardNavModel()
     /// Logical keyboard-nav selection. Plain @State (not @FocusState) so reads
     /// and writes are synchronous within a single event handler — using
@@ -142,6 +145,7 @@ struct MenuBarPopupView: View {
             }
             updateSortedDevices()
             syncNavOrder()
+            listeningModes.update(outputUID: deviceVolumeMonitor.defaultDeviceUID)
         }
         .onChange(of: audioEngine.apps) { _, _ in
             syncNavOrder()
@@ -161,6 +165,9 @@ struct MenuBarPopupView: View {
         }
         .onChange(of: deviceVolumeMonitor.defaultDeviceID) { _, _ in
             updateSortedDevices()
+            withAnimation(.snappy(duration: 0.25)) {
+                listeningModes.update(outputUID: deviceVolumeMonitor.defaultDeviceUID)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
             // Global notification — fires for every window in the process. Filter to
@@ -173,6 +180,8 @@ struct MenuBarPopupView: View {
             popupVisibility.isVisible = true
             audioEngine.bluetoothDeviceMonitor.refresh()
             deviceVolumeMonitor.refreshAlertVolume()
+            listeningModes.update(outputUID: deviceVolumeMonitor.defaultDeviceUID)
+            listeningModes.startPolling()
             syncNavOrder()
             hasKeyboardEngaged = false
             selectedRow = nil
@@ -184,6 +193,7 @@ struct MenuBarPopupView: View {
                   String(describing: type(of: window)).contains("FluidMenuBarExtra")
             else { return }
             popupVisibility.isVisible = false
+            listeningModes.stopPolling()
             hasKeyboardEngaged = false
             selectedRow = nil
         }
@@ -347,6 +357,15 @@ struct MenuBarPopupView: View {
                         onSelect: { audioEngine.setDefaultOutputDevice(device.id) }
                     )
                     .id(PopupKeyboardNavModel.RowID.device(uid: device.uid))
+
+                    if listeningModes.isAvailable, listeningModes.deviceUID == device.uid {
+                        PanelListeningModes(
+                            modes: listeningModes.supportedModes,
+                            current: listeningModes.currentMode,
+                            onSelect: { listeningModes.select($0) }
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
 
             }
@@ -1025,6 +1044,7 @@ private struct PanelPreview: View {
                 Text("Edit").font(.system(size: 12)).foregroundStyle(.secondary)
             }
             PanelDeviceRow(name: "AirPods Max", symbol: "airpodsmax", isSelected: true, onSelect: {})
+            PanelListeningModes(modes: [.off, .transparency, .noiseCancellation], current: .noiseCancellation, onSelect: { _ in })
             PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
             Divider().padding(.vertical, 6).padding(.horizontal, PanelMetrics.rowHorizontalPadding)
             PanelSectionHeader("Apps")

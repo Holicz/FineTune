@@ -131,6 +131,35 @@ struct PanelAppRow: View {
     }
 }
 
+// MARK: - Headphone listening modes
+
+/// Noise-control choices shown under the selected AirPods, like the native menu:
+/// indented rows with small circle badges; the active mode is accent-filled.
+struct PanelListeningModes: View {
+    let modes: [ListeningMode]
+    let current: ListeningMode?
+    let onSelect: (ListeningMode) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(modes) { mode in
+                HStack(spacing: 10) {
+                    PanelCircleIcon(systemName: mode.symbol, isSelected: mode == current, size: 22)
+                    Text(mode.title)
+                        .font(.system(size: 13))
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, PanelMetrics.circleSize + 10)
+                .panelRow()
+                .onTapGesture { onSelect(mode) }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(mode == current ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(.bottom, 2)
+    }
+}
+
 // MARK: - System sounds
 
 /// Alert/UI-sound volume (screenshot shutter, Trash, alerts). Bell toggles mute,
@@ -205,6 +234,7 @@ struct PanelActionRow: View {
     VStack(alignment: .leading, spacing: 2) {
         PanelSectionHeader("Output")
         PanelDeviceRow(name: "AirPods Max", symbol: "airpodsmax", isSelected: true, onSelect: {})
+        PanelListeningModes(modes: [.off, .transparency, .noiseCancellation], current: .noiseCancellation, onSelect: { _ in })
         PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
         Divider().padding(.vertical, 6)
         PanelSectionHeader("Apps")
