@@ -5,15 +5,17 @@
 import AudioToolbox
 import SwiftUI
 
+/// Measured against the native Sound menu extra (macOS 26): ~308pt wide,
+/// content inset 14pt from the edge, 26pt badges in 32pt rows.
 enum PanelMetrics {
-    static let width: CGFloat = 330
-    static let padding: CGFloat = 14
+    static let width: CGFloat = 310
+    static let horizontalPadding: CGFloat = 8
+    static let verticalPadding: CGFloat = 12
     static let cornerRadius: CGFloat = 18
-    static let circleSize: CGFloat = 28
-    static let rowRadius: CGFloat = 10
-    static let rowVerticalPadding: CGFloat = 5
+    static let circleSize: CGFloat = 26
+    static let rowRadius: CGFloat = 8
+    static let rowVerticalPadding: CGFloat = 3
     static let rowHorizontalPadding: CGFloat = 6
-    static let sectionSpacing: CGFloat = 10
 }
 
 // MARK: - Section header
@@ -39,6 +41,17 @@ struct PanelSectionHeader<Accessory: View>: View {
         .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
         .padding(.top, 2)
         .padding(.bottom, 2)
+    }
+}
+
+// MARK: - Divider
+
+/// Hairline between sections, inset to the content edge like the native menu.
+struct PanelDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
+            .padding(.vertical, 6)
     }
 }
 
@@ -125,6 +138,7 @@ extension AudioDevice {
         }
         .panelRow(isFocused: true)
     }
-    .padding(PanelMetrics.padding)
+    .padding(.horizontal, PanelMetrics.horizontalPadding)
+    .padding(.vertical, PanelMetrics.verticalPadding)
     .frame(width: PanelMetrics.width)
 }

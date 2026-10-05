@@ -54,10 +54,11 @@ struct DeviceVolumeSlider: View {
                     onMuteToggle()
                 }
             } label: {
-                Image(systemName: VolumeSymbol.name(for: sliderValue, muted: showsMuted))
+                // Min-volume glyph (doubles as the mute toggle).
+                Image(systemName: showsMuted ? "speaker.slash.fill" : "speaker.fill")
                     .font(.system(size: 13, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 22, height: 22)
+                    .frame(width: 18, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -70,6 +71,11 @@ struct DeviceVolumeSlider: View {
             .controlSize(.regular)
             .opacity(showsMuted ? 0.55 : 1)
             .scrollWheelStep($sliderValue, in: 0.0...1.0)
+
+            // Max-volume glyph, like the native Sound menu.
+            Image(systemName: "speaker.wave.3.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
         }
         .onChange(of: sliderValue) { _, newValue in
             if isUpdatingFromDevice {
@@ -152,20 +158,6 @@ struct AppVolumeSlider: View {
     }
 }
 
-// MARK: - Speaker glyph
-
-enum VolumeSymbol {
-    static func name(for fraction: Double, muted: Bool) -> String {
-        if muted { return "speaker.slash.fill" }
-        switch fraction {
-        case ..<0.01: return "speaker.fill"
-        case ..<0.34: return "speaker.wave.1.fill"
-        case ..<0.67: return "speaker.wave.2.fill"
-        default: return "speaker.wave.3.fill"
-        }
-    }
-}
-
 // MARK: - Previews
 
 #Preview("Panel sliders") {
@@ -179,7 +171,8 @@ enum VolumeSymbol {
                 AppVolumeSlider(volume: app, isMuted: false, onVolumeChange: { app = $0 }, onMuteChange: { _ in })
                 AppVolumeSlider(volume: boosted, isMuted: false, onVolumeChange: { boosted = $0 }, onMuteChange: { _ in })
             }
-            .padding(PanelMetrics.padding)
+            .padding(.horizontal, PanelMetrics.horizontalPadding)
+        .padding(.vertical, PanelMetrics.verticalPadding)
             .frame(width: PanelMetrics.width)
         }
     }

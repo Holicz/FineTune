@@ -27,22 +27,23 @@ struct MenuBarPopupView: View {
 
     /// How long an app stays listed after it last produced sound.
     static let audibleLinger: TimeInterval = 8
+    /// How long a silent output stream must stay open before the app is listed.
+    static let steadyRunThreshold: TimeInterval = 15
     /// Peak level above which an app counts as audible (≈ −60 dBFS).
     static let audibleThreshold: Float = 0.001
 
     /// Memoized sorted output devices - only recomputed when device list or default changes
     @State private var sortedDevices: [AudioDevice] = []
 
-    /// Memoized paired Bluetooth devices
-    @State private var pairedDevices: [PairedBluetoothDevice] = []
-
-    /// Whether Bluetooth hardware is powered on
-    @State private var isBluetoothOn = false
-
-    /// Last time each app (by persistence ID) produced sound. Apps keep an output
-    /// stream open while idle (Spotify paused), and re-open it on every device
-    /// switch, so "is running" alone makes rows flicker in and out.
+    /// Last time each app (by persistence ID) produced sound. Apps briefly
+    /// re-open their output stream on every device switch, so "is running"
+    /// alone makes idle apps (paused Spotify) flicker in and out.
     @State private var lastAudible: [String: Date] = [:]
+
+    /// When each app's output stream started running, tracked even while the
+    /// panel is closed. A stream that stays open (a call where nobody is
+    /// talking) is listed once it has run for `steadyRunThreshold`.
+    @State private var runningSince: [String: Date] = [:]
 
     /// True while the panel window is key; drives level polling.
     @State private var isPanelOpen = false
@@ -73,7 +74,7 @@ struct MenuBarPopupView: View {
             Text("Sound")
                 .font(.system(size: 13, weight: .bold))
                 .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
-                .padding(.bottom, 8)
+                .padding(.bottom, 6)
 
             if let device = defaultOutputDevice {
                 DeviceVolumeSlider(
@@ -89,7 +90,8 @@ struct MenuBarPopupView: View {
                 // Rebuild per device so the slider re-reads its initial position.
                 .id(device.uid)
                 .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
-                .padding(.bottom, PanelMetrics.sectionSpacing)
+
+                PanelDivider()
             }
 
             ScrollViewReader { proxy in
@@ -107,24 +109,14 @@ struct MenuBarPopupView: View {
                 }
             }
 
-            if !accessibility.isTrustedCached {
-                Divider()
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
-                PanelActionRow(title: "Allow Volume Keys…") {
-                    NSApp.keyWindow?.resignKey()
-                    accessibility.requestAccess()
-                }
-                .help("FineTune needs Accessibility access to handle the volume keys")
-            }
         }
-        .padding(PanelMetrics.padding)
+        .padding(.horizontal, PanelMetrics.horizontalPadding)
+        .padding(.vertical, PanelMetrics.verticalPadding)
         .frame(width: PanelMetrics.width)
         .animation(.snappy(duration: 0.25), value: visibleApps.map(\.id))
         .onAppear {
+            updateRunningSince()
             updateSortedDevices()
-            pairedDevices = audioEngine.bluetoothDeviceMonitor.pairedDevices
-            isBluetoothOn = audioEngine.bluetoothDeviceMonitor.isBluetoothOn
             // popupVisibility.isVisible is driven by the filtered NSWindow key
             // notifications below, not by .onAppear — SwiftUI mounts this view
             // before the popup is actually shown, and setting isVisible here
@@ -141,14 +133,11 @@ struct MenuBarPopupView: View {
             updateSortedDevices()
             syncNavOrder()
         }
+        .onChange(of: audioEngine.apps) { _, _ in
+            updateRunningSince()
+        }
         .onChange(of: visibleApps.map(\.id)) { _, _ in
             syncNavOrder()
-        }
-        .onChange(of: audioEngine.bluetoothDeviceMonitor.pairedDevices) { _, newValue in
-            pairedDevices = newValue
-        }
-        .onChange(of: audioEngine.bluetoothDeviceMonitor.isBluetoothOn) { _, newValue in
-            isBluetoothOn = newValue
         }
         .onChange(of: deviceVolumeMonitor.defaultDeviceID) { _, _ in
             updateSortedDevices()
@@ -162,9 +151,7 @@ struct MenuBarPopupView: View {
                   String(describing: type(of: window)).contains("FluidMenuBarExtra")
             else { return }
             popupVisibility.isVisible = true
-            audioEngine.bluetoothDeviceMonitor.refresh()
             deviceVolumeMonitor.refreshAlertVolume()
-            accessibility.refresh()
             updateAudibility()
             isPanelOpen = true
             syncNavOrder()
@@ -225,9 +212,7 @@ struct MenuBarPopupView: View {
             PanelSectionHeader("Output")
             devicesContent
 
-            Divider()
-                .padding(.vertical, 6)
-                .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
+            PanelDivider()
 
             appsSection()
         }
@@ -239,15 +224,6 @@ struct MenuBarPopupView: View {
     }
 
     // MARK: - Devices
-
-    /// Paired Bluetooth audio devices that aren't connected, offered like the
-    /// native Sound menu: click to connect.
-    private var connectablePairedDevices: [PairedBluetoothDevice] {
-        guard isBluetoothOn else { return [] }
-        // Name match also covers the IOBluetooth/CoreAudio desync where both report the device.
-        let connectedNames = Set(audioEngine.outputDevices.map(\.name))
-        return pairedDevices.filter { !connectedNames.contains($0.name) && !Self.isHiddenOutput(name: $0.name) }
-    }
 
     private var devicesContent: some View {
         VStack(spacing: 0) {
@@ -262,24 +238,6 @@ struct MenuBarPopupView: View {
                 .id(PopupKeyboardNavModel.RowID.device(uid: device.uid))
             }
 
-            ForEach(connectablePairedDevices) { device in
-                let monitor = audioEngine.bluetoothDeviceMonitor
-                PanelDeviceRow(
-                    name: device.name,
-                    symbol: device.symbolName,
-                    isSelected: false,
-                    isDimmed: true,
-                    onSelect: { monitor.connect(device: device) }
-                ) {
-                    if monitor.connectingIDs.contains(device.id) {
-                        ProgressView().controlSize(.small)
-                    } else if monitor.connectionErrors[device.id] != nil {
-                        Image(systemName: "exclamationmark.circle")
-                            .foregroundStyle(.secondary)
-                            .help(monitor.connectionErrors[device.id] ?? "")
-                    }
-                }
-            }
         }
     }
 
@@ -295,6 +253,8 @@ struct MenuBarPopupView: View {
                 return true
             case .active(let app):
                 if audioEngine.isPinned(app) { return true }
+                if let since = runningSince[app.persistenceIdentifier],
+                   now.timeIntervalSince(since) >= Self.steadyRunThreshold { return true }
                 guard let last = lastAudible[app.persistenceIdentifier] else { return false }
                 return now.timeIntervalSince(last) < Self.audibleLinger
             }
@@ -313,21 +273,12 @@ struct MenuBarPopupView: View {
         if updated != lastAudible { lastAudible = updated }
     }
 
-    @ViewBuilder
-    private var emptyStateView: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: DesignTokens.Spacing.sm) {
-                Image(systemName: "speaker.slash")
-                    .font(.title)
-                    .foregroundStyle(DesignTokens.Colors.textTertiary)
-                Text("No apps playing audio")
-                    .font(.callout)
-                    .foregroundStyle(DesignTokens.Colors.textSecondary)
-            }
-            Spacer()
-        }
-        .padding(.vertical, DesignTokens.Spacing.lg)
+    private func updateRunningSince() {
+        let now = Date()
+        let running = Set(audioEngine.apps.map(\.persistenceIdentifier))
+        var updated = runningSince.filter { running.contains($0.key) }
+        for id in running where updated[id] == nil { updated[id] = now }
+        if updated != runningSince { runningSince = updated }
     }
 
     @ViewBuilder
@@ -341,8 +292,6 @@ struct MenuBarPopupView: View {
 
         if permission.status != .authorized {
             PermissionBannerView(permission: permission)
-        } else if visibleApps.isEmpty {
-            emptyStateView
         } else {
             appsContent()
         }
@@ -367,7 +316,6 @@ struct MenuBarPopupView: View {
     private func activeAppRow(app: AudioApp, displayableApp: DisplayableApp) -> some View {
         if let deviceUID = audioEngine.getDeviceUID(for: app) {
             let isFollowingDefault = audioEngine.isFollowingDefault(for: app)
-            let isMulti = audioEngine.getDeviceSelectionMode(for: app) == .multi
             PanelAppRow(
                 name: app.name,
                 icon: app.icon,
@@ -376,21 +324,7 @@ struct MenuBarPopupView: View {
                 isFocused: hasKeyboardEngaged && selectedRow == .app(persistenceID: displayableApp.id),
                 routingSubtitle: routingSubtitle(deviceUID: deviceUID, isFollowingDefault: isFollowingDefault),
                 onVolumeChange: { audioEngine.setVolume(for: app, to: $0) },
-                onMuteChange: { audioEngine.setMute(for: app, to: $0) },
-                routing: AnyView(OutputRoutingMenu(
-                    devices: sortedDevices,
-                    symbolForDevice: deviceSymbol,
-                    selectedDeviceUID: deviceUID,
-                    isFollowingDefault: isFollowingDefault,
-                    onSelectDevice: { uid in
-                        if isMulti { audioEngine.setDeviceSelectionMode(for: app, to: .single) }
-                        audioEngine.setDevice(for: app, deviceUID: uid)
-                    },
-                    onSelectFollowDefault: {
-                        if isMulti { audioEngine.setDeviceSelectionMode(for: app, to: .single) }
-                        audioEngine.setDevice(for: app, deviceUID: nil)
-                    }
-                ))
+                onMuteChange: { audioEngine.setMute(for: app, to: $0) }
             )
             .id(PopupKeyboardNavModel.RowID.app(persistenceID: displayableApp.id))
             .transition(.opacity)
@@ -404,7 +338,6 @@ struct MenuBarPopupView: View {
         let deviceUID = audioEngine.getDeviceRoutingForInactive(identifier: identifier)
             ?? deviceVolumeMonitor.defaultDeviceUID ?? ""
         let isFollowingDefault = audioEngine.isFollowingDefaultForInactive(identifier: identifier)
-        let isMulti = audioEngine.getDeviceSelectionModeForInactive(identifier: identifier) == .multi
         PanelAppRow(
             name: info.displayName,
             icon: displayableApp.icon,
@@ -414,21 +347,7 @@ struct MenuBarPopupView: View {
             isFocused: hasKeyboardEngaged && selectedRow == .app(persistenceID: displayableApp.id),
             routingSubtitle: routingSubtitle(deviceUID: deviceUID, isFollowingDefault: isFollowingDefault),
             onVolumeChange: { audioEngine.setVolumeForInactive(identifier: identifier, to: $0) },
-            onMuteChange: { audioEngine.setMuteForInactive(identifier: identifier, to: $0) },
-            routing: AnyView(OutputRoutingMenu(
-                devices: sortedDevices,
-                symbolForDevice: deviceSymbol,
-                selectedDeviceUID: deviceUID,
-                isFollowingDefault: isFollowingDefault,
-                onSelectDevice: { uid in
-                    if isMulti { audioEngine.setDeviceSelectionModeForInactive(identifier: identifier, to: .single) }
-                    audioEngine.setDeviceRoutingForInactive(identifier: identifier, deviceUID: uid)
-                },
-                onSelectFollowDefault: {
-                    if isMulti { audioEngine.setDeviceSelectionModeForInactive(identifier: identifier, to: .single) }
-                    audioEngine.setDeviceRoutingForInactive(identifier: identifier, deviceUID: nil)
-                }
-            ))
+            onMuteChange: { audioEngine.setMuteForInactive(identifier: identifier, to: $0) }
         )
         .id(PopupKeyboardNavModel.RowID.app(persistenceID: displayableApp.id))
     }
@@ -437,10 +356,6 @@ struct MenuBarPopupView: View {
     private func routingSubtitle(deviceUID: String, isFollowingDefault: Bool) -> String? {
         guard !isFollowingDefault else { return nil }
         return sortedDevices.first(where: { $0.uid == deviceUID }).map { "→ \($0.name)" }
-    }
-
-    private func deviceSymbol(_ device: AudioDevice) -> String {
-        device.panelSymbol(override: audioEngine.settingsManager.getDeviceIconOverride(for: device.uid))
     }
 
     // MARK: - Helpers
@@ -679,15 +594,14 @@ private struct PanelPreview: View {
             Text("Sound")
                 .font(.system(size: 13, weight: .bold))
                 .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
-                .padding(.bottom, 8)
+                .padding(.bottom, 6)
             DeviceVolumeSlider(volume: deviceVolume, isMuted: false, onVolumeChange: { deviceVolume = $0 }, onMuteToggle: {})
                 .padding(.horizontal, PanelMetrics.rowHorizontalPadding)
-                .padding(.bottom, PanelMetrics.sectionSpacing)
+            PanelDivider()
             PanelSectionHeader("Output")
             PanelDeviceRow(name: "AirPods Max", symbol: "airpodsmax", isSelected: true, onSelect: {})
             PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
-            PanelDeviceRow(name: "JBL Flip 6", symbol: "headphones", isSelected: false, isDimmed: true, onSelect: {})
-            Divider().padding(.vertical, 6).padding(.horizontal, PanelMetrics.rowHorizontalPadding)
+            PanelDivider()
             PanelSectionHeader("Apps")
             PanelSystemSoundsRow(volume: 0.3, onVolumeChange: { _ in })
             ForEach(0..<3) { i in
@@ -697,19 +611,12 @@ private struct PanelPreview: View {
                     volume: volumes[i],
                     isMuted: i == 2,
                     onVolumeChange: { volumes[i] = $0 },
-                    onMuteChange: { _ in },
-                    routing: AnyView(OutputRoutingMenu(
-                        devices: MockData.sampleDevices,
-                        symbolForDevice: { _ in "macbook" },
-                        selectedDeviceUID: "",
-                        isFollowingDefault: true,
-                        onSelectDevice: { _ in },
-                        onSelectFollowDefault: {}
-                    ))
+                    onMuteChange: { _ in }
                 )
             }
         }
-        .padding(PanelMetrics.padding)
+        .padding(.horizontal, PanelMetrics.horizontalPadding)
+        .padding(.vertical, PanelMetrics.verticalPadding)
         .frame(width: PanelMetrics.width)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: PanelMetrics.cornerRadius))
         .padding(40)

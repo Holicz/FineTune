@@ -12,8 +12,6 @@ struct PanelDeviceRow<Accessory: View>: View {
     let symbol: String
     let isSelected: Bool
     var isFocused: Bool = false
-    /// Paired but not connected — shown muted, like the native menu.
-    var isDimmed: Bool = false
     let onSelect: () -> Void
     @ViewBuilder var accessory: () -> Accessory
 
@@ -22,7 +20,6 @@ struct PanelDeviceRow<Accessory: View>: View {
         symbol: String,
         isSelected: Bool,
         isFocused: Bool = false,
-        isDimmed: Bool = false,
         onSelect: @escaping () -> Void,
         @ViewBuilder accessory: @escaping () -> Accessory = { EmptyView() }
     ) {
@@ -30,7 +27,6 @@ struct PanelDeviceRow<Accessory: View>: View {
         self.symbol = symbol
         self.isSelected = isSelected
         self.isFocused = isFocused
-        self.isDimmed = isDimmed
         self.onSelect = onSelect
         self.accessory = accessory
     }
@@ -40,7 +36,6 @@ struct PanelDeviceRow<Accessory: View>: View {
             PanelCircleIcon(systemName: symbol, isSelected: isSelected)
             Text(name)
                 .font(.system(size: 13))
-                .foregroundStyle(isDimmed ? .secondary : .primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
@@ -55,54 +50,9 @@ struct PanelDeviceRow<Accessory: View>: View {
     }
 }
 
-// MARK: - Output routing
-
-/// Per-app output picker as a native menu (positions itself on screen, unlike a popover).
-struct OutputRoutingMenu: View {
-    let devices: [AudioDevice]
-    let symbolForDevice: (AudioDevice) -> String
-    let selectedDeviceUID: String
-    let isFollowingDefault: Bool
-    let onSelectDevice: (String) -> Void
-    let onSelectFollowDefault: () -> Void
-
-    private var selectedDevice: AudioDevice? {
-        isFollowingDefault ? nil : devices.first { $0.uid == selectedDeviceUID }
-    }
-
-    var body: some View {
-        Menu {
-            Toggle(isOn: Binding(get: { isFollowingDefault }, set: { _ in onSelectFollowDefault() })) {
-                Label("System Output", systemImage: "speaker.wave.2")
-            }
-            Divider()
-            ForEach(devices) { device in
-                Toggle(isOn: Binding(
-                    get: { !isFollowingDefault && device.uid == selectedDeviceUID },
-                    set: { _ in onSelectDevice(device.uid) }
-                )) {
-                    Label(device.name, systemImage: symbolForDevice(device))
-                }
-            }
-        } label: {
-            Image(systemName: selectedDevice.map(symbolForDevice) ?? "speaker.wave.2")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(selectedDevice == nil ? Color.secondary : Color.accentColor)
-                .frame(width: 24, height: 24)
-                .background(Circle().fill(.quaternary))
-                .contentShape(Circle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("Output for this app")
-    }
-}
-
 // MARK: - App volume
 
-/// App icon + name over a 0–200 % slider, percentage and output routing.
+/// App icon + name over a 0–200 % slider and percentage.
 /// Clicking the icon toggles mute.
 struct PanelAppRow: View {
     let name: String
@@ -114,8 +64,6 @@ struct PanelAppRow: View {
     var routingSubtitle: String? = nil
     let onVolumeChange: (Float) -> Void
     let onMuteChange: (Bool) -> Void
-    /// Output routing control (OutputRoutingMenu), supplied by the parent.
-    var routing: AnyView? = nil
 
     private var percentage: Int { Int(round(VolumeMapping.gainToSlider(volume) * 100)) }
 
@@ -171,10 +119,6 @@ struct PanelAppRow: View {
                     onVolumeChange: onVolumeChange,
                     onMuteChange: onMuteChange
                 )
-            }
-
-            if let routing {
-                routing
             }
         }
         .panelRow(isFocused: isFocused)
@@ -256,7 +200,7 @@ struct PanelActionRow: View {
         PanelSectionHeader("Output")
         PanelDeviceRow(name: "AirPods Max", symbol: "airpodsmax", isSelected: true, onSelect: {})
         PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
-        Divider().padding(.vertical, 6)
+        PanelDivider()
         PanelSectionHeader("Apps")
         PanelSystemSoundsRow(volume: 0.3, onVolumeChange: { _ in })
         PanelAppRow(name: "Spotify", icon: MockData.sampleApps[0].icon, volume: 1.0, isMuted: false,
@@ -265,9 +209,10 @@ struct PanelActionRow: View {
                     routingSubtitle: "→ MacBook Pro Speakers", onVolumeChange: { _ in }, onMuteChange: { _ in })
         PanelAppRow(name: "Chrome", icon: MockData.sampleApps[1].icon, volume: 0.4, isMuted: true,
                     onVolumeChange: { _ in }, onMuteChange: { _ in })
-        Divider().padding(.vertical, 6)
+        PanelDivider()
         PanelActionRow(title: "Allow Volume Keys…") {}
     }
-    .padding(PanelMetrics.padding)
+    .padding(.horizontal, PanelMetrics.horizontalPadding)
+        .padding(.vertical, PanelMetrics.verticalPadding)
     .frame(width: PanelMetrics.width)
 }
