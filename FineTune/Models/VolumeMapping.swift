@@ -32,7 +32,7 @@ enum VolumeMapping {
     /// Slider 50% → gain 0.25 (−12 dB). Provides perceptual linearity for software gain.
     static func sliderToGain(_ slider: Double) -> Float {
         if slider <= 0 { return 0 }
-        let t = min(slider, maxSlider)
+        let t = min(slider, 1.0)
         return Float(t * t)
     }
 
@@ -40,30 +40,12 @@ enum VolumeMapping {
     /// Gain 0.25 → slider 50%. Inverse of `sliderToGain`.
     static func gainToSlider(_ gain: Float) -> Double {
         if gain <= 0 { return 0 }
-        return Double(sqrt(min(gain, Float(maxSlider * maxSlider))))
+        return Double(sqrt(min(gain, 1.0)))
     }
 
-    // MARK: - Over-unity range
-
-    /// Per-app sliders run past 100%: position 2.0 = 200% = gain 4.0 (+12 dB),
-    /// the ceiling ProcessTapController and its soft limiter are built for.
-    static let maxSlider: Double = 2.0
-
-    /// Half-width of the sticky zone around 100% while dragging.
-    static let unityDetentWidth: Double = 0.06
-
-    /// Snaps slider positions near 100% to exactly 100%, so a drag "catches" at
-    /// unity and has to be pushed further to boost.
-    static func applyingUnityDetent(_ slider: Double) -> Double {
-        abs(slider - 1.0) < unityDetentWidth ? 1.0 : slider
-    }
-
-    /// One keyboard/shortcut step. Clamps to 0...maxSlider and stops at 100%
-    /// when stepping up from below, mirroring the drag detent.
+    /// One keyboard/shortcut step, clamped to 0…100%.
     static func steppedSlider(from current: Double, delta: Double) -> Double {
-        let next = max(0.0, min(maxSlider, current + delta))
-        if current < 1.0 - 0.0001 && next > 1.0 { return 1.0 }
-        return next
+        max(0.0, min(1.0, current + delta))
     }
 
     /// `.software` is linear PCM; `.hardware` / `.ddc` scalars are already audio-tapered

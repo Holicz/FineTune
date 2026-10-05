@@ -99,12 +99,11 @@ struct DeviceVolumeSlider: View {
     }
 }
 
-// MARK: - App volume (0–200 % with a 100 % detent)
+// MARK: - App volume
 
-/// Per-app gain slider running to 200 %. A tick marks 100 %; dragging catches
-/// there (with a trackpad haptic) and has to be pushed further to boost.
+/// Per-app gain slider (0–100 %, square-law mapped).
 struct AppVolumeSlider: View {
-    /// Linear gain 0…4.
+    /// Linear gain 0…1.
     let volume: Float
     let isMuted: Bool
     let onVolumeChange: (Float) -> Void
@@ -116,45 +115,24 @@ struct AppVolumeSlider: View {
         dragOverrideValue ?? VolumeMapping.gainToSlider(volume)
     }
 
-    /// Drag binding: positions near 100% snap to it.
-    private var dragBinding: Binding<Double> {
+    private var binding: Binding<Double> {
         Binding(
             get: { sliderValue },
-            set: { apply(VolumeMapping.applyingUnityDetent($0)) }
-        )
-    }
-
-    /// Scroll binding: steps stop once at 100% instead of snapping back every tick.
-    private var scrollBinding: Binding<Double> {
-        Binding(
-            get: { sliderValue },
-            set: {
-                apply(VolumeMapping.steppedSlider(from: sliderValue, delta: $0 - sliderValue))
-                dragOverrideValue = nil
+            set: { newValue in
+                dragOverrideValue = newValue
+                onVolumeChange(VolumeMapping.sliderToGain(newValue))
+                if isMuted { onMuteChange(false) }
             }
         )
     }
 
-    private func apply(_ newValue: Double) {
-        if newValue == 1.0 && sliderValue != 1.0 {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-        }
-        dragOverrideValue = newValue
-        onVolumeChange(VolumeMapping.sliderToGain(newValue))
-        if isMuted { onMuteChange(false) }
-    }
-
     var body: some View {
-        Slider(value: dragBinding, in: 0...VolumeMapping.maxSlider) {
-            EmptyView()
-        } ticks: {
-            SliderTick(1.0)
-        } onEditingChanged: { editing in
+        Slider(value: binding, in: 0...1) { editing in
             if !editing { dragOverrideValue = nil }
         }
         .controlSize(.small)
         .opacity(isMuted ? 0.55 : 1)
-        .scrollWheelStep(scrollBinding, in: 0.0...VolumeMapping.maxSlider)
+        .scrollWheelStep(binding, in: 0.0...1.0)
     }
 }
 
@@ -164,12 +142,10 @@ struct AppVolumeSlider: View {
     struct Demo: View {
         @State var device: Float = 0.6
         @State var app: Float = 1.0
-        @State var boosted: Float = 2.0
         var body: some View {
             VStack(spacing: 14) {
                 DeviceVolumeSlider(volume: device, isMuted: false, onVolumeChange: { device = $0 }, onMuteToggle: {})
                 AppVolumeSlider(volume: app, isMuted: false, onVolumeChange: { app = $0 }, onMuteChange: { _ in })
-                AppVolumeSlider(volume: boosted, isMuted: false, onVolumeChange: { boosted = $0 }, onMuteChange: { _ in })
             }
             .padding(.horizontal, PanelMetrics.horizontalPadding)
         .padding(.vertical, PanelMetrics.verticalPadding)

@@ -587,7 +587,7 @@ struct MenuBarPopupView: View {
 /// Static stand-in for the panel (the real view needs a live AudioEngine).
 private struct PanelPreview: View {
     @State private var deviceVolume: Float = 0.55
-    @State private var volumes: [Float] = [1.0, 2.25, 0.4]
+    @State private var volumes: [Float] = [1.0, 0.6, 0.4]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

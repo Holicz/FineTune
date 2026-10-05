@@ -52,7 +52,7 @@ struct PanelDeviceRow<Accessory: View>: View {
 
 // MARK: - App volume
 
-/// App icon + name over a 0–200 % slider and percentage.
+/// App icon + name over a volume slider and percentage.
 /// Clicking the icon toggles mute.
 struct PanelAppRow: View {
     let name: String
@@ -109,7 +109,7 @@ struct PanelAppRow: View {
                             get: { percentage },
                             set: { onVolumeChange(VolumeMapping.sliderToGain(Double($0) / 100)) }
                         ),
-                        range: 0...Int(VolumeMapping.maxSlider * 100),
+                        range: 0...100,
                         isRowFocused: isFocused
                     )
                 }
