@@ -6,7 +6,6 @@ import UniformTypeIdentifiers
 struct MenuBarPopupView: View {
     @Bindable var audioEngine: AudioEngine
     @Bindable var deviceVolumeMonitor: DeviceVolumeMonitor
-    @ObservedObject var updateManager: UpdateManager
 
     let permission: AudioRecordingPermission
 

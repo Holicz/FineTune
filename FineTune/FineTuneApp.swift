@@ -50,7 +50,6 @@ struct FineTuneApp: App {
     @State private var menuBarPopupController: MenuBarPopupController
     @State private var shortcutsRegistry: ShortcutsRegistry
     @State private var resolver: TargetAppResolver
-    @StateObject private var updateManager = UpdateManager()
     @State private var showMenuBarExtra = true
 
     /// Snapshot icon computed at launch from the user's chosen style and the current
@@ -69,8 +68,7 @@ struct FineTuneApp: App {
                 accessibility: accessibility,
                 mediaKeyStatus: mediaKeyStatus,
                 mediaKeyMonitor: mediaKeyMonitor,
-                shortcutsRegistry: shortcutsRegistry,
-                updateManager: updateManager
+                shortcutsRegistry: shortcutsRegistry
             )
         }
         FluidMenuBarExtra("FineTune", image: launchIconImage, isInserted: $showMenuBarExtra) {
@@ -86,7 +84,6 @@ struct FineTuneApp: App {
         MenuBarPopupView(
             audioEngine: audioEngine,
             deviceVolumeMonitor: audioEngine.deviceVolumeMonitor as! DeviceVolumeMonitor,
-            updateManager: updateManager,
             permission: audioEngine.permission,
             accessibility: accessibility,
             mediaKeyStatus: mediaKeyStatus,

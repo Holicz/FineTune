@@ -84,14 +84,6 @@ struct AboutLinkChip: View {
 #Preview("About Link Chip") {
     HStack(spacing: 8) {
         AboutLinkChip(
-            label: "Donate",
-            icon: "heart.fill",
-            hoverIcon: "heart.fill",
-            hoverColor: .pink,
-            url: DesignTokens.Links.support,
-            isPrimary: true
-        )
-        AboutLinkChip(
             label: "Star on GitHub",
             icon: "star",
             hoverIcon: "star.fill",
