@@ -2,6 +2,7 @@
 // Building blocks for the menu bar panel, modeled on the macOS 26 Sound menu extra:
 // plain section headers, circular glyph badges, full-width rows with a soft hover fill.
 
+import AppKit
 import AudioToolbox
 import SwiftUI
 
@@ -64,11 +65,20 @@ struct PanelCircleIcon: View {
     var isSelected: Bool = false
     var size: CGFloat = PanelMetrics.circleSize
 
+    /// Native badges use filled glyphs where one exists (hifispeaker.fill, tv.fill …)
+    /// and the generic laptop instead of the MacBook outline.
+    private var glyph: String {
+        let base = systemName == "macbook" ? "laptopcomputer" : systemName
+        let filled = base + ".fill"
+        return NSImage(systemSymbolName: filled, accessibilityDescription: nil) != nil ? filled : base
+    }
+
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: size * 0.46, weight: .medium))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(isSelected ? Color.white : Color.primary)
+        Image(systemName: glyph)
+            .font(.system(size: size * 0.5, weight: .medium))
+            // Unselected: grey two-tone glyph like the native Sound menu; selected: white on accent.
+            .symbolRenderingMode(isSelected ? .monochrome : .hierarchical)
+            .foregroundStyle(isSelected ? Color.white : Color.secondary)
             .frame(width: size, height: size)
             .background(
                 Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary))
@@ -124,9 +134,7 @@ extension AudioDevice {
 
 #Preview("Panel building blocks") {
     VStack(alignment: .leading, spacing: 4) {
-        PanelSectionHeader("Output") {
-            Button("Edit") {}.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(.secondary)
-        }
+        PanelSectionHeader("Output")
         HStack(spacing: 10) {
             PanelCircleIcon(systemName: "airpodsmax", isSelected: true)
             Text("AirPods Max").font(.system(size: 13))
