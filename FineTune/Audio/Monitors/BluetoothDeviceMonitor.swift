@@ -240,7 +240,9 @@ final class BluetoothDeviceMonitor {
             guard hasA2DP || hasHFP else { continue }
 
             let name = device.name ?? mac
-            result.append(RawPairedDevice(mac: mac, name: name, iconName: suggestedIconName(for: name)))
+            let iconName = AppleHeadphones.productID(of: device).flatMap(AppleHeadphones.symbol(forProductID:))
+                ?? suggestedIconName(for: name)
+            result.append(RawPairedDevice(mac: mac, name: name, iconName: iconName))
         }
 
         result.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }

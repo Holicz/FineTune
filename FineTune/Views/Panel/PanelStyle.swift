@@ -102,7 +102,8 @@ extension AudioDevice {
         if let override, NSImage(systemSymbolName: override, accessibilityDescription: nil) != nil {
             return override
         }
-        return AudioDeviceID.iconSymbol(forName: name, transport: id.readTransportType())
+        return AppleHeadphones.symbol(forAudioUID: uid)
+            ?? AudioDeviceID.iconSymbol(forName: name, transport: id.readTransportType())
     }
 }
 

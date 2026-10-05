@@ -131,6 +131,10 @@ extension AudioDeviceID {
     /// Returns an appropriate SF Symbol name based on device name and transport type.
     /// Used as fallback when kAudioDevicePropertyIcon is not available.
     func suggestedIconSymbol() -> String {
+        // AirPods/Beats by Bluetooth product ID first — robust to renamed devices.
+        if let uid = try? readDeviceUID(), let symbol = AppleHeadphones.symbol(forAudioUID: uid) {
+            return symbol
+        }
         let name = (try? readDeviceName()) ?? ""
         let transport = readTransportType()
         return Self.iconSymbol(forName: name, transport: transport)

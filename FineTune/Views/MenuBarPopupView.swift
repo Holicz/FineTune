@@ -321,9 +321,8 @@ struct MenuBarPopupView: View {
                     let connectedNames = Set(editableDeviceOrder.map(\.name))
                     let filteredPaired = pairedDevices.filter { !connectedNames.contains($0.name) }
                     if !filteredPaired.isEmpty {
-                        SectionHeader(title: "Paired")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, DesignTokens.Spacing.xs)
+                        PanelSectionHeader("Paired")
+                            .padding(.top, 6)
 
                         ForEach(filteredPaired) { device in
                             PairedDeviceRow(
