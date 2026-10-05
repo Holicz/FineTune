@@ -75,13 +75,6 @@ struct GeneralTab: View {
             ) {
                 IconStyleSegmentedControl(selection: $settings.appSettings.menuBarIconStyle)
             }
-            SettingsRowDivider()
-            SettingsRow(
-                "Popup Size",
-                description: "Smaller fits more on screen; larger leaves more breathing room."
-            ) {
-                PopupSizeTilePicker(selection: $settings.appSettings.popupSize)
-            }
         }
     }
 

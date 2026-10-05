@@ -8,12 +8,12 @@ import Foundation
 
 @Suite("HUD slider fraction matches popup slider position for every tier")
 struct HUDPopupParityTests {
-    @Test("Software tier: HUD sliderFraction == DeviceRow.volumeToSlider for the same gain", arguments: [
+    @Test("Software tier: HUD sliderFraction == panel slider fraction for the same gain", arguments: [
         Float(0.0), 0.01, 0.1, 0.25, 0.5, 0.7071, 0.9, 1.0
     ])
     func softwareParity(gain: Float) {
         let hudFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .software)
-        let popupFraction = DeviceRow.volumeToSlider(gain, backend: .software)
+        let popupFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .software)
         #expect(hudFraction == popupFraction)
     }
 
@@ -22,7 +22,7 @@ struct HUDPopupParityTests {
     ])
     func hardwareParity(gain: Float) {
         let hudFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .hardware)
-        let popupFraction = DeviceRow.volumeToSlider(gain, backend: .hardware)
+        let popupFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .hardware)
         #expect(hudFraction == popupFraction)
     }
 
@@ -31,15 +31,15 @@ struct HUDPopupParityTests {
     ])
     func ddcParity(gain: Float) {
         let hudFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .ddc)
-        let popupFraction = DeviceRow.volumeToSlider(gain, backend: .ddc)
+        let popupFraction = VolumeMapping.sliderFraction(forSystemGain: gain, tier: .ddc)
         #expect(hudFraction == popupFraction)
     }
 
-    @Test("Per-app: gainToSlider matches AppRowControls' sliderValue formula", arguments: [
+    @Test("Per-app: gainToSlider matches AppVolumeSlider's sliderValue formula", arguments: [
         Float(0.0), 0.01, 0.25, 0.5, 1.0
     ])
     func perAppParity(gain: Float) {
-        // AppRowControls.sliderValue (no drag override) == VolumeMapping.gainToSlider(volume).
+        // AppVolumeSlider.sliderValue (no drag override) == VolumeMapping.gainToSlider(volume).
         let hudFraction = VolumeMapping.gainToSlider(gain)
         let popupSliderValue = VolumeMapping.gainToSlider(gain)
         #expect(hudFraction == popupSliderValue)
