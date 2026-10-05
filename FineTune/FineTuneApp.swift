@@ -57,20 +57,6 @@ struct FineTuneApp: App {
     private let launchIconImage: NSImage
 
     var body: some Scene {
-        // Declared before FluidMenuBarExtra so this Settings scene wins over
-        // FluidMenuBarExtra's `Settings {}` placeholder. Both ⌘, and the
-        // gear button route here via openSettings().
-        Settings {
-            SettingsRootView(
-                settings: audioEngine.settingsManager,
-                audioEngine: audioEngine,
-                deviceVolumeMonitor: audioEngine.deviceVolumeMonitor as! DeviceVolumeMonitor,
-                accessibility: accessibility,
-                mediaKeyStatus: mediaKeyStatus,
-                mediaKeyMonitor: mediaKeyMonitor,
-                shortcutsRegistry: shortcutsRegistry
-            )
-        }
         FluidMenuBarExtra("FineTune", image: launchIconImage, isInserted: $showMenuBarExtra) {
             menuBarContent
         }
@@ -104,6 +90,7 @@ struct FineTuneApp: App {
         OrphanedTapCleanup.destroyOrphanedDevices()
 
         let settings = SettingsManager()
+        settings.enforceLaunchAtLogin()
         let profileManager = AutoEQProfileManager()
         let permission = AudioRecordingPermission()
         let engine = AudioEngine(permission: permission, settingsManager: settings, autoEQProfileManager: profileManager)

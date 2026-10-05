@@ -118,18 +118,6 @@ struct SettingsJSONTests {
         }
     }
 
-    @Test("Invalid defaultNewAppVolume is reset to 1.0 on decode")
-    func invalidDefaultVolumeReset() throws {
-        // AppSettings uses auto-synthesized Codable — all keys required.
-        // MenuBarIconStyle raw value is capitalized ("Default", not "default").
-        let json = """
-        {"appSettings": {"launchAtLogin": false, "menuBarIconStyle": "Default", "defaultNewAppVolume": -5.0, "lockInputDevice": true, "showDeviceDisconnectAlerts": true}}
-        """
-        let data = Data(json.utf8)
-        let decoded = try JSONDecoder().decode(SettingsManager.Settings.self, from: data)
-        #expect(decoded.appSettings.defaultNewAppVolume == 1.0,
-                "Negative defaultNewAppVolume should be reset to 1.0")
-    }
 }
 
 // MARK: - mergePriorityOrder
@@ -221,26 +209,17 @@ struct AppSettingsDefaultTests {
     @Test("Default AppSettings has expected values")
     func defaults() {
         let settings = AppSettings()
-        #expect(settings.launchAtLogin == false)
+        #expect(settings.launchAtLogin == true)
         #expect(settings.menuBarIconStyle == .speaker)
-        #expect(settings.defaultNewAppVolume == 1.0)
+        #expect(settings.defaultNewAppVolume == 0.7)
         #expect(settings.lockInputDevice == false)
-        #expect(settings.showDeviceDisconnectAlerts == true)
+        #expect(settings.showDeviceDisconnectAlerts == false)
     }
 
     @Test("loudnessEqualizationEnabled defaults to false")
     func loudnessEqualizationEnabledDefault() {
         let settings = AppSettings()
         #expect(settings.loudnessEqualizationEnabled == false)
-    }
-
-    @Test("loudnessEqualizationEnabled round-trips through JSON as true")
-    func loudnessEqualizationEnabledRoundTrip() throws {
-        var settings = AppSettings()
-        settings.loudnessEqualizationEnabled = true
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-        #expect(decoded.loudnessEqualizationEnabled == true)
     }
 
     @Test("Unified loudness toggle updates compensation and equalization together")
@@ -272,15 +251,6 @@ struct AppSettingsDefaultTests {
     func volumeHotkeyStepDefault() {
         let settings = AppSettings()
         #expect(settings.volumeHotkeyStep == .normal)
-    }
-
-    @Test("volumeHotkeyStep round-trips through JSON")
-    func volumeHotkeyStepRoundTrip() throws {
-        var settings = AppSettings()
-        settings.volumeHotkeyStep = .fine
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-        #expect(decoded.volumeHotkeyStep == .fine)
     }
 
     @Test("Missing volumeHotkeyStep key decodes to .normal")

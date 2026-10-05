@@ -153,6 +153,10 @@ final class FluidMenuBarExtraStatusItem: NSObject, NSWindowDelegate {
         }
     }
 
+    func windowDidResize(_ notification: Notification) {
+        window.invalidateShadow()
+    }
+
     func windowDidBecomeKey(_ notification: Notification) {
         globalEventMonitor?.start()
         setButtonHighlighted(to: true)
@@ -252,6 +256,8 @@ final class FluidMenuBarExtraStatusItem: NSObject, NSWindowDelegate {
         }
 
         window.setFrame(newFrame, display: true, animate: animate)
+        // The shadow follows the rounded content; recompute it for the new size.
+        window.invalidateShadow()
     }
 }
 

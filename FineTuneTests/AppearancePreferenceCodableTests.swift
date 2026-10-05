@@ -56,26 +56,6 @@ struct AppearancePreferenceCodableTests {
         #expect(settings.appearance == .system)
     }
 
-    @Test("AppSettings with appearance=.light round-trips through JSON")
-    @MainActor
-    func appSettingsAppearanceLightRoundTrip() throws {
-        var settings = AppSettings()
-        settings.appearance = .light
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-        #expect(decoded.appearance == .light)
-    }
-
-    @Test("AppSettings with appearance=.dark round-trips through JSON")
-    @MainActor
-    func appSettingsAppearanceDarkRoundTrip() throws {
-        var settings = AppSettings()
-        settings.appearance = .dark
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-        #expect(decoded.appearance == .dark)
-    }
-
     @Test("Decoding AppSettings without appearance key produces .system default")
     @MainActor
     func missingAppearanceProducesSystemDefault() throws {
@@ -97,13 +77,4 @@ struct AppearancePreferenceCodableTests {
         #expect(decoded.appearance == .system)
     }
 
-    @Test("SettingsManager.Settings round-trip preserves appearance")
-    @MainActor
-    func settingsManagerAppearanceRoundTrip() throws {
-        var settings = SettingsManager.Settings()
-        settings.appSettings.appearance = .light
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(SettingsManager.Settings.self, from: data)
-        #expect(decoded.appSettings.appearance == .light)
-    }
 }

@@ -8,6 +8,8 @@ struct PairedBluetoothDevice: Identifiable, Hashable {
     let id: String
     let name: String
     let icon: NSImage?
+    /// SF Symbol behind `icon`, for the panel's circle badge.
+    var symbolName: String = "headphones"
 
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }

@@ -121,7 +121,8 @@ final class BluetoothDeviceMonitor {
                     icon: NSImage(
                         systemSymbolName: raw.iconName,
                         accessibilityDescription: raw.name
-                    )
+                    ),
+                    symbolName: raw.iconName
                 )
             }
             pairedDevices = devices

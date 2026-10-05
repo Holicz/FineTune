@@ -6,17 +6,6 @@ import Foundation
 @Suite("AppSettings customShortcuts")
 @MainActor
 struct AppSettingsCustomShortcutsTests {
-    @Test("round-trips a custom shortcut")
-    func roundTrip() throws {
-        var settings = AppSettings()
-        settings.customShortcuts[ShortcutAction.togglePopup.rawValue] =
-            ShortcutCodable(keyCode: 9, modifiers: 0x12_0000)
-
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-
-        #expect(decoded.customShortcuts == settings.customShortcuts)
-    }
 
     @Test("defaults to empty when missing from JSON")
     func defaultsEmpty() throws {

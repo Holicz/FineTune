@@ -12,6 +12,8 @@ struct PanelDeviceRow<Accessory: View>: View {
     let symbol: String
     let isSelected: Bool
     var isFocused: Bool = false
+    /// Paired but not connected — shown muted, like the native menu.
+    var isDimmed: Bool = false
     let onSelect: () -> Void
     @ViewBuilder var accessory: () -> Accessory
 
@@ -20,6 +22,7 @@ struct PanelDeviceRow<Accessory: View>: View {
         symbol: String,
         isSelected: Bool,
         isFocused: Bool = false,
+        isDimmed: Bool = false,
         onSelect: @escaping () -> Void,
         @ViewBuilder accessory: @escaping () -> Accessory = { EmptyView() }
     ) {
@@ -27,6 +30,7 @@ struct PanelDeviceRow<Accessory: View>: View {
         self.symbol = symbol
         self.isSelected = isSelected
         self.isFocused = isFocused
+        self.isDimmed = isDimmed
         self.onSelect = onSelect
         self.accessory = accessory
     }
@@ -36,6 +40,7 @@ struct PanelDeviceRow<Accessory: View>: View {
             PanelCircleIcon(systemName: symbol, isSelected: isSelected)
             Text(name)
                 .font(.system(size: 13))
+                .foregroundStyle(isDimmed ? .secondary : .primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
@@ -47,6 +52,51 @@ struct PanelDeviceRow<Accessory: View>: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+// MARK: - Output routing
+
+/// Per-app output picker as a native menu (positions itself on screen, unlike a popover).
+struct OutputRoutingMenu: View {
+    let devices: [AudioDevice]
+    let symbolForDevice: (AudioDevice) -> String
+    let selectedDeviceUID: String
+    let isFollowingDefault: Bool
+    let onSelectDevice: (String) -> Void
+    let onSelectFollowDefault: () -> Void
+
+    private var selectedDevice: AudioDevice? {
+        isFollowingDefault ? nil : devices.first { $0.uid == selectedDeviceUID }
+    }
+
+    var body: some View {
+        Menu {
+            Toggle(isOn: Binding(get: { isFollowingDefault }, set: { _ in onSelectFollowDefault() })) {
+                Label("System Output", systemImage: "speaker.wave.2")
+            }
+            Divider()
+            ForEach(devices) { device in
+                Toggle(isOn: Binding(
+                    get: { !isFollowingDefault && device.uid == selectedDeviceUID },
+                    set: { _ in onSelectDevice(device.uid) }
+                )) {
+                    Label(device.name, systemImage: symbolForDevice(device))
+                }
+            }
+        } label: {
+            Image(systemName: selectedDevice.map(symbolForDevice) ?? "speaker.wave.2")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(selectedDevice == nil ? Color.secondary : Color.accentColor)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(.quaternary))
+                .contentShape(Circle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Output for this app")
     }
 }
 
@@ -64,7 +114,7 @@ struct PanelAppRow: View {
     var routingSubtitle: String? = nil
     let onVolumeChange: (Float) -> Void
     let onMuteChange: (Bool) -> Void
-    /// Output routing control (DevicePicker), supplied by the parent.
+    /// Output routing control (OutputRoutingMenu), supplied by the parent.
     var routing: AnyView? = nil
 
     private var percentage: Int { Int(round(VolumeMapping.gainToSlider(volume) * 100)) }
@@ -131,35 +181,6 @@ struct PanelAppRow: View {
     }
 }
 
-// MARK: - Headphone listening modes
-
-/// Noise-control choices shown under the selected AirPods, like the native menu:
-/// indented rows with small circle badges; the active mode is accent-filled.
-struct PanelListeningModes: View {
-    let modes: [ListeningMode]
-    let current: ListeningMode?
-    let onSelect: (ListeningMode) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(modes) { mode in
-                HStack(spacing: 10) {
-                    PanelCircleIcon(systemName: mode.symbol, isSelected: mode == current, size: 22)
-                    Text(mode.title)
-                        .font(.system(size: 13))
-                    Spacer(minLength: 0)
-                }
-                .padding(.leading, PanelMetrics.circleSize + 10)
-                .panelRow()
-                .onTapGesture { onSelect(mode) }
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(mode == current ? [.isButton, .isSelected] : .isButton)
-            }
-        }
-        .padding(.bottom, 2)
-    }
-}
-
 // MARK: - System sounds
 
 /// Alert/UI-sound volume (screenshot shutter, Trash, alerts). Bell toggles mute,
@@ -212,7 +233,7 @@ struct PanelSystemSoundsRow: View {
 
 // MARK: - Plain action row
 
-/// Menu-item style text row ("FineTune Settings…").
+/// Menu-item style text row ("Allow Volume Keys…").
 struct PanelActionRow: View {
     let title: String
     let action: () -> Void
@@ -234,7 +255,6 @@ struct PanelActionRow: View {
     VStack(alignment: .leading, spacing: 2) {
         PanelSectionHeader("Output")
         PanelDeviceRow(name: "AirPods Max", symbol: "airpodsmax", isSelected: true, onSelect: {})
-        PanelListeningModes(modes: [.off, .transparency, .noiseCancellation], current: .noiseCancellation, onSelect: { _ in })
         PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
         Divider().padding(.vertical, 6)
         PanelSectionHeader("Apps")
@@ -246,7 +266,7 @@ struct PanelActionRow: View {
         PanelAppRow(name: "Chrome", icon: MockData.sampleApps[1].icon, volume: 0.4, isMuted: true,
                     onVolumeChange: { _ in }, onMuteChange: { _ in })
         Divider().padding(.vertical, 6)
-        PanelActionRow(title: "FineTune Settings…") {}
+        PanelActionRow(title: "Allow Volume Keys…") {}
     }
     .padding(PanelMetrics.padding)
     .frame(width: PanelMetrics.width)

@@ -322,7 +322,7 @@ struct SettingsMigrationV10toV11Tests {
         #expect(decoded.version == 10)
         #expect(decoded.deviceVolumeTierOverride.isEmpty == true)
         #expect(decoded.appSettings.lockInputDevice == false)  // forced off in this fork
-        #expect(decoded.appSettings.showDeviceDisconnectAlerts == true)
+        #expect(decoded.appSettings.showDeviceDisconnectAlerts == false)  // fixed in this fork
         #expect(decoded.softwareDeviceVolumes.isEmpty)
         #expect(decoded.softwareDeviceMuteStates.isEmpty)
         #expect(decoded.softwareDeviceSavedVolumes.isEmpty)

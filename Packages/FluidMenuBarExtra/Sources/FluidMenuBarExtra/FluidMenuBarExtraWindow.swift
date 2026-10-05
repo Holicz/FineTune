@@ -17,8 +17,7 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
     private let content: () -> Content
     weak var statusItem: FluidMenuBarExtraStatusItem? = nil
 
-    // Liquid Glass background, like the macOS 26 menu bar extras. It sits inset
-    // in a transparent container so its soft shadow isn't clipped by the window edge.
+    // Liquid Glass background, like the macOS 26 menu bar extras.
     private lazy var glassView: NSGlassEffectView = {
         let view = NSGlassEffectView()
         view.style = .regular
@@ -27,7 +26,17 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
         return view
     }()
 
-    private let containerView = NSView()
+    /// Clips everything to the panel's rounded shape so the window server derives
+    /// a rounded system shadow (the glass's own shadow would otherwise be cut off
+    /// at the window edge or fill the corners).
+    private let containerView: NSView = {
+        let view = NSView()
+        view.wantsLayer = true
+        view.layer?.cornerRadius = GlassMetrics.cornerRadius
+        view.layer?.cornerCurve = .continuous
+        view.layer?.masksToBounds = true
+        return view
+    }()
 
     private var rootView: some View {
         content()
@@ -68,25 +77,23 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
         level = .statusBar
         isOpaque = false
         backgroundColor = .clear
-        // The glass draws its own rim; a window shadow would trace the square frame.
-        hasShadow = false
+        hasShadow = true
 
         animationBehavior = animation
         collectionBehavior = [.stationary, .moveToActiveSpace, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
 
-        let margin = GlassMetrics.shadowMargin
         contentView = containerView
         containerView.addSubview(glassView)
         glassView.contentView = hostingView
         setContentSize(GlassMetrics.windowSize(forGlass: hostingView.intrinsicContentSize))
 
         NSLayoutConstraint.activate([
-            glassView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: margin),
-            glassView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -margin),
-            glassView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -margin),
-            glassView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: margin),
+            glassView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            glassView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            glassView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            glassView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             hostingView.topAnchor.constraint(equalTo: glassView.topAnchor),
             hostingView.trailingAnchor.constraint(equalTo: glassView.trailingAnchor),
             hostingView.bottomAnchor.constraint(equalTo: glassView.bottomAnchor),
@@ -109,13 +116,15 @@ final class FluidMenuBarExtraWindow<Content: View>: NSPanel {
     }
 }
 
-/// Geometry of the glass panel inside its (larger, transparent) window.
+/// Geometry of the glass panel window.
 enum GlassMetrics {
-    static let cornerRadius: CGFloat = 22
-    /// Transparent room around the glass for its shadow.
-    static let shadowMargin: CGFloat = 24
-    /// Gap between the menu bar and the top of the glass.
-    static let menuBarGap: CGFloat = 5
+    /// Matches the native Sound / Control Center menu extras.
+    static let cornerRadius: CGFloat = 18
+    /// No extra room needed: the shadow is the window's own.
+    static let shadowMargin: CGFloat = 0
+    /// Vertical offset from the status item window. Negative because that window
+    /// extends below the visible bar; this lines the panel up with native extras.
+    static let menuBarGap: CGFloat = -4
 
     static func windowSize(forGlass size: CGSize) -> CGSize {
         CGSize(width: size.width + 2 * shadowMargin, height: size.height + 2 * shadowMargin)

@@ -8,7 +8,7 @@ import SwiftUI
 enum PanelMetrics {
     static let width: CGFloat = 330
     static let padding: CGFloat = 14
-    static let cornerRadius: CGFloat = 22
+    static let cornerRadius: CGFloat = 18
     static let circleSize: CGFloat = 28
     static let rowRadius: CGFloat = 10
     static let rowVerticalPadding: CGFloat = 5

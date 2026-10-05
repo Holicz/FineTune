@@ -44,15 +44,6 @@ struct MenuBarPopupSizeCodableTests {
         #expect(decoded.popupSize == .comfortable)
     }
 
-    @Test("AppSettings.popupSize round-trips through full JSON")
-    func roundTripThroughAppSettings() throws {
-        var settings = AppSettings()
-        settings.popupSize = .spacious
-
-        let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
-        #expect(decoded.popupSize == .spacious)
-    }
 }
 
 @Suite("MenuBarPopupSize — Dimensions resolution")

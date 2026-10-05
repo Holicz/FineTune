@@ -22,19 +22,21 @@ struct IgnoredAppInfo: Codable, Equatable {
 
 // MARK: - App-Wide Settings Model
 
+/// The Settings window is removed in this fork: user-facing preferences are
+/// fixed to the values below and re-applied on every load.
 nonisolated struct AppSettings: Codable, Equatable {
     // General
-    var launchAtLogin: Bool = false
+    var launchAtLogin: Bool = true
     var menuBarIconStyle: MenuBarIconStyle = .speaker
 
     // Audio
-    var defaultNewAppVolume: Float = 1.0      // 100% (unity gain)
+    var defaultNewAppVolume: Float = 0.7
 
     // Input Device Lock
     var lockInputDevice: Bool = false         // Input UI is removed in this fork; macOS owns input selection
 
     // Notifications
-    var showDeviceDisconnectAlerts: Bool = true
+    var showDeviceDisconnectAlerts: Bool = false
 
     // Audio Processing
     var loudnessCompensationEnabled: Bool = false  // ISO 226:2023 equal-loudness contour compensation
@@ -63,22 +65,10 @@ nonisolated struct AppSettings: Codable, Equatable {
         loudnessEqualizationEnabled = enabled
     }
 
+    /// Stored preferences are ignored: with no Settings window the values above
+    /// are fixed. (Input lock stays off so macOS input changes aren't reverted.)
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
-        menuBarIconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .menuBarIconStyle) ?? .speaker
-        defaultNewAppVolume = try c.decodeIfPresent(Float.self, forKey: .defaultNewAppVolume) ?? 1.0
-        // Always off: with no input UI, a lock would block input changes made in System Settings.
-        lockInputDevice = false
-        showDeviceDisconnectAlerts = try c.decodeIfPresent(Bool.self, forKey: .showDeviceDisconnectAlerts) ?? true
-        loudnessCompensationEnabled = try c.decodeIfPresent(Bool.self, forKey: .loudnessCompensationEnabled) ?? false
-        loudnessEqualizationEnabled = try c.decodeIfPresent(Bool.self, forKey: .loudnessEqualizationEnabled) ?? false
-        hudStyle = try c.decodeIfPresent(HUDStyle.self, forKey: .hudStyle) ?? .tahoe
-        mediaKeyControlEnabled = try c.decodeIfPresent(Bool.self, forKey: .mediaKeyControlEnabled) ?? true
-        volumeHotkeyStep = try c.decodeIfPresent(VolumeHotkeyStep.self, forKey: .volumeHotkeyStep) ?? .normal
-        customShortcuts = try c.decodeIfPresent([String: ShortcutCodable].self, forKey: .customShortcuts) ?? [:]
-        appearance = try c.decodeIfPresent(AppearancePreference.self, forKey: .appearance) ?? .system
-        popupSize = try c.decodeIfPresent(MenuBarPopupSize.self, forKey: .popupSize) ?? .comfortable
+        self.init()
     }
 }
 
@@ -160,7 +150,7 @@ final class SettingsManager {
             }
 
             appSettings = decodedAppSettings
-            systemSoundsFollowsDefault = try c.decodeIfPresent(Bool.self, forKey: .systemSoundsFollowsDefault) ?? true
+            systemSoundsFollowsDefault = true  // fixed: no Settings window to pick another device
             appDeviceSelectionMode = try c.decodeIfPresent([String: DeviceSelectionMode].self, forKey: .appDeviceSelectionMode) ?? [:]
             appSelectedDeviceUIDs = try c.decodeIfPresent([String: [String]].self, forKey: .appSelectedDeviceUIDs) ?? [:]
             lockedInputDeviceUID = try c.decodeIfPresent(String.self, forKey: .lockedInputDeviceUID)
@@ -823,6 +813,12 @@ final class SettingsManager {
         } catch {
             logger.error("Failed to set launch at login: \(error.localizedDescription)")
         }
+    }
+
+    /// Launch at login is fixed on; registers the login item if macOS doesn't have it.
+    func enforceLaunchAtLogin() {
+        guard SMAppService.mainApp.status != .enabled else { return }
+        setLaunchAtLogin(true)
     }
 
     /// Returns the actual launch at login status from the system

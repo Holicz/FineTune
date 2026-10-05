@@ -8,13 +8,17 @@ import AppKit
 @MainActor
 extension MenuBarIconImage {
     /// The status item is variable-length: icons of differing sizes resize it and shift every neighboring menu bar item.
-    static let canvasSize = NSSize(width: 22, height: 18)
+    static let canvasSize = NSSize(width: 26, height: 22)
+
+    /// Matches the glyph size of the system menu extras (Sound, Control Center).
+    static let symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
 
     func nsImage(accessibilityDescription: String = "FineTune") -> NSImage? {
         let source: NSImage?
         switch self {
         case .systemSymbol(let name):
-            source = NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
+            source = NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)?
+                .withSymbolConfiguration(Self.symbolConfiguration)
         case .asset(let name):
             source = NSImage(named: name)
         }
