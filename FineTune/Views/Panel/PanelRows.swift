@@ -131,6 +131,56 @@ struct PanelAppRow: View {
     }
 }
 
+// MARK: - System sounds
+
+/// Alert/UI-sound volume (screenshot shutter, Trash, alerts). Bell toggles mute,
+/// restoring the previous level.
+struct PanelSystemSoundsRow: View {
+    let volume: Float
+    var isFocused: Bool = false
+    let onVolumeChange: (Float) -> Void
+
+    @State private var volumeBeforeMute: Float = 0.5
+
+    private var isSilent: Bool { volume <= 0.001 }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                if isSilent {
+                    onVolumeChange(max(volumeBeforeMute, 0.1))
+                } else {
+                    volumeBeforeMute = volume
+                    onVolumeChange(0)
+                }
+            } label: {
+                PanelCircleIcon(systemName: isSilent ? "bell.slash.fill" : "bell.fill")
+            }
+            .buttonStyle(.plain)
+            .help(isSilent ? "Unmute system sounds" : "Mute system sounds")
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("System Sounds")
+                        .font(.system(size: 13))
+                    Spacer(minLength: 4)
+                    Text("\(Int(round(volume * 100)))%")
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(
+                    value: Binding(get: { Double(volume) }, set: { onVolumeChange(Float($0)) }),
+                    in: 0...1
+                )
+                .controlSize(.small)
+                .opacity(isSilent ? 0.55 : 1)
+            }
+        }
+        .panelRow(isFocused: isFocused)
+        .help("Alerts and sound effects such as the screenshot shutter")
+    }
+}
+
 // MARK: - Plain action row
 
 /// Menu-item style text row ("FineTune Settings…").
@@ -158,6 +208,7 @@ struct PanelActionRow: View {
         PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
         Divider().padding(.vertical, 6)
         PanelSectionHeader("Apps")
+        PanelSystemSoundsRow(volume: 0.3, onVolumeChange: { _ in })
         PanelAppRow(name: "Spotify", icon: MockData.sampleApps[0].icon, volume: 1.0, isMuted: false,
                     onVolumeChange: { _ in }, onMuteChange: { _ in })
         PanelAppRow(name: "Zoom", icon: MockData.sampleApps[2].icon, volume: 2.25, isMuted: false,

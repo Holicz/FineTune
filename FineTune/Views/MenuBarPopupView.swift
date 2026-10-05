@@ -172,6 +172,7 @@ struct MenuBarPopupView: View {
             else { return }
             popupVisibility.isVisible = true
             audioEngine.bluetoothDeviceMonitor.refresh()
+            deviceVolumeMonitor.refreshAlertVolume()
             syncNavOrder()
             hasKeyboardEngaged = false
             selectedRow = nil
@@ -461,6 +462,13 @@ struct MenuBarPopupView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
+        }
+
+        if !isEditingDevicePriority {
+            PanelSystemSoundsRow(
+                volume: deviceVolumeMonitor.alertVolume,
+                onVolumeChange: { deviceVolumeMonitor.setAlertVolume($0) }
+            )
         }
 
         if permission.status != .authorized {
@@ -1020,6 +1028,7 @@ private struct PanelPreview: View {
             PanelDeviceRow(name: "MacBook Pro Speakers", symbol: "macbook", isSelected: false, onSelect: {})
             Divider().padding(.vertical, 6).padding(.horizontal, PanelMetrics.rowHorizontalPadding)
             PanelSectionHeader("Apps")
+            PanelSystemSoundsRow(volume: 0.3, onVolumeChange: { _ in })
             ForEach(0..<3) { i in
                 PanelAppRow(
                     name: MockData.sampleApps[i].name,

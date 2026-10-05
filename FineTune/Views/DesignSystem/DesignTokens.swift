@@ -320,7 +320,7 @@ enum DesignTokens {
         static let rowNameBold = Font.system(size: 13, weight: .semibold)
 
         /// Volume percentage display
-        static let percentage = Font.system(size: 11, weight: .medium, design: .monospaced)
+        static let percentage = Font.system(size: 11).monospacedDigit()
 
         /// Small caption text
         static let caption = Font.system(size: 10, weight: .regular)
